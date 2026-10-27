@@ -1,133 +1,314 @@
 {% extends "base.html" %}
 {% block title %}{{ 'Modifier' if editing else 'Publier' }} une annonce – IKRILI{% endblock %}
+{% block head %}<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">{% endblock %}
 {% block content %}
-{% set input = "w-full px-3 py-2.5 rounded-lg border-[1.5px] border-[#D5DCE5] bg-white text-[15px]" %}
+{% set input = "w-full px-3.5 py-3 rounded-xl border-[1.5px] border-[#D9DDEA] bg-white text-[15px] font-normal focus:border-brand outline-none" %}
+{% set lbl = "flex flex-col gap-1.5 font-semibold text-sm" %}
 {% macro val(name, default='') -%}{{ form.get(name) if form.get(name) is not none else default }}{%- endmacro %}
 {% macro checked(name, current) -%}{% if form %}{% if form.get(name) %}checked{% endif %}{% elif current %}checked{% endif %}{%- endmacro %}
+{% macro toggle(name, label, current, hint='') -%}
+  <label class="relative flex items-center justify-between gap-4 p-4 rounded-2xl border-[1.5px] border-line cursor-pointer has-[:checked]:border-brand has-[:checked]:bg-brand-soft">
+    <span class="flex flex-col"><span class="font-semibold">{{ label }}</span>{% if hint %}<span class="text-sm text-muted">{{ hint }}</span>{% endif %}</span>
+    <input type="checkbox" name="{{ name }}" value="1" {{ checked(name, current) }} class="w-5 h-5 accent-[#2D4BF0] shrink-0">
+  </label>
+{%- endmacro %}
+{% set steps = ['Le logement', 'Loyer', 'Emplacement', 'Photos'] %}
 
-<div class="max-w-3xl mx-auto px-4 sm:px-6 py-8 flex flex-col gap-6">
-  <h1 class="text-3xl font-extrabold tracking-tight">{{ 'Modifier mon annonce' if editing else 'Publier une annonce' }}</h1>
+<div class="max-w-3xl mx-auto px-4 sm:px-6 py-8 flex flex-col gap-7">
+  <div class="flex flex-col gap-1">
+    <span class="text-sm font-extrabold uppercase tracking-wider text-brand">{{ 'Modifier' if editing else 'Nouvelle annonce' }}</span>
+    <h1 class="text-3xl sm:text-4xl font-extrabold">{{ listing.title if editing else 'Publie ton logement' }}</h1>
+  </div>
 
-  <form method="post" enctype="multipart/form-data" class="flex flex-col gap-8">
+  {# Barre de progression #}
+  <ol id="stepper" class="hidden grid-cols-4 gap-2" aria-label="Étapes">
+    {% for s in steps %}
+      <li>
+        <button type="button" data-goto="{{ loop.index0 }}" class="w-full flex flex-col gap-2 text-left group disabled:cursor-default">
+          <span class="h-1.5 rounded-full bg-slate-200 overflow-hidden"><span data-bar class="block h-full w-0 bg-brand transition-all duration-300"></span></span>
+          <span class="text-xs sm:text-sm font-bold text-muted" data-label><span class="hidden sm:inline">{{ loop.index }}. </span>{{ s }}</span>
+        </button>
+      </li>
+    {% endfor %}
+  </ol>
+
+  <form id="listing-form" method="post" enctype="multipart/form-data" class="flex flex-col gap-8" novalidate>
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-    <fieldset class="flex flex-col gap-4">
-      <legend class="text-xl font-extrabold mb-3">Le logement</legend>
-      <label class="flex flex-col gap-1.5 font-semibold text-sm">Titre de l'annonce
-        <input name="title" required minlength="8" maxlength="140" value="{{ val('title', listing.title or '') }}" class="{{ input }}" placeholder="Ex. S+2 meublé près d'ESPRIT">
+    {# ---------- Étape 1 ---------- #}
+    <fieldset data-step class="flex flex-col gap-5">
+      <legend class="font-display text-2xl font-extrabold mb-4">Parle-nous du logement</legend>
+      <label class="{{ lbl }}">Titre de l'annonce
+        <input name="title" required minlength="8" maxlength="140" value="{{ val('title', listing.title or '') }}" class="{{ input }}" placeholder="Ex. S+2 meublé et lumineux près d'ESPRIT">
+        <span class="text-xs font-normal text-muted">Type, point fort et lieu : c'est ce que les locataires voient en premier.</span>
       </label>
-      <div class="grid gap-4 grid-cols-1 sm:grid-cols-3">
-        <label class="flex flex-col gap-1.5 font-semibold text-sm">Type
-          <select name="property_type" required class="{{ input }}">
-            <option value="">Choisir…</option>
-            {% for v, l in property_types %}<option value="{{ v }}" {% if val('property_type', listing.property_type or '') == v %}selected{% endif %}>{{ l }}</option>{% endfor %}
-          </select>
+      <fieldset class="flex flex-col gap-2">
+        <legend class="font-semibold text-sm mb-2">Type de logement</legend>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {% for v, l in property_types %}
+            <label class="relative">
+              <input type="radio" name="property_type" value="{{ v }}" required {% if val('property_type', listing.property_type or '') == v %}checked{% endif %} class="peer sr-only">
+              <span class="min-h-[52px] px-3 flex items-center justify-center text-center rounded-2xl border-[1.5px] border-line text-sm font-bold cursor-pointer peer-checked:border-brand peer-checked:bg-brand-soft peer-checked:text-brand-dark peer-focus-visible:ring-2 peer-focus-visible:ring-brand">{{ l }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </fieldset>
+      <div class="grid gap-4 grid-cols-2 sm:grid-cols-4">
+        <label class="{{ lbl }}">Typologie<input name="typology" value="{{ val('typology', listing.typology or '') }}" class="{{ input }}" placeholder="S+2"></label>
+        <label class="{{ lbl }}">Chambres<input type="number" min="1" inputmode="numeric" name="rooms" value="{{ val('rooms', listing.rooms or 1) }}" class="{{ input }}"></label>
+        <label class="{{ lbl }}">Surface (m²)<input type="number" min="5" inputmode="numeric" name="surface_m2" value="{{ val('surface_m2', listing.surface_m2 or '') }}" class="{{ input }}"></label>
+        <label class="{{ lbl }}">Étage<input name="floor" value="{{ val('floor', listing.floor or '') }}" class="{{ input }}" placeholder="2e étage"></label>
+      </div>
+      <label class="{{ lbl }}">Description
+        <textarea name="description" required minlength="30" rows="6" class="{{ input }}" placeholder="Pièces, état, ambiance du quartier, conditions (caution, durée du contrat)…">{{ val('description', listing.description or '') }}</textarea>
+        <span class="text-xs font-normal text-muted"><span data-count="description">0</span> caractères · 30 minimum</span>
+      </label>
+    </fieldset>
+
+    {# ---------- Étape 2 ---------- #}
+    <fieldset data-step class="flex flex-col gap-5">
+      <legend class="font-display text-2xl font-extrabold mb-4">Loyer et conditions</legend>
+      <div class="grid gap-4 sm:grid-cols-2">
+        <label class="{{ lbl }}">Loyer mensuel
+          <span class="relative">
+            <input type="number" min="1" inputmode="numeric" name="price_tnd" required value="{{ val('price_tnd', listing.price_tnd or '') }}" class="{{ input }} pr-14 text-lg font-bold">
+            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-muted font-semibold">TND</span>
+          </span>
         </label>
-        <label class="flex flex-col gap-1.5 font-semibold text-sm">Typologie
-          <input name="typology" value="{{ val('typology', listing.typology or '') }}" class="{{ input }}" placeholder="S+1, S+2…">
-        </label>
-        <label class="flex flex-col gap-1.5 font-semibold text-sm">Chambres
-          <input type="number" min="1" name="rooms" value="{{ val('rooms', listing.rooms or 1) }}" class="{{ input }}">
-        </label>
-        <label class="flex flex-col gap-1.5 font-semibold text-sm">Surface (m²)
-          <input type="number" min="5" name="surface_m2" value="{{ val('surface_m2', listing.surface_m2 or '') }}" class="{{ input }}">
-        </label>
-        <label class="flex flex-col gap-1.5 font-semibold text-sm">Étage
-          <input name="floor" value="{{ val('floor', listing.floor or '') }}" class="{{ input }}" placeholder="2e étage">
-        </label>
-        <label class="flex flex-col gap-1.5 font-semibold text-sm">Disponible le
+        <label class="{{ lbl }}">Disponible à partir du
           <input type="date" name="available_from" value="{{ val('available_from', listing.available_from.isoformat() if listing.available_from else '') }}" class="{{ input }}">
         </label>
       </div>
-      <label class="flex flex-col gap-1.5 font-semibold text-sm">Description
-        <textarea name="description" required minlength="30" rows="6" class="{{ input }} font-normal" placeholder="Pièces, état, quartier, conditions (caution, durée du contrat)…">{{ val('description', listing.description or '') }}</textarea>
+      <label class="{{ lbl }}">Charges
+        <input name="charges_info" value="{{ val('charges_info', listing.charges_info or '') }}" class="{{ input }}" placeholder="Ex. eau et syndic inclus, électricité en sus">
       </label>
-    </fieldset>
-
-    <fieldset class="flex flex-col gap-4">
-      <legend class="text-xl font-extrabold mb-3">Loyer</legend>
-      <div class="grid gap-4 grid-cols-1 sm:grid-cols-2">
-        <label class="flex flex-col gap-1.5 font-semibold text-sm">Loyer mensuel (TND)
-          <input type="number" min="1" name="price_tnd" required value="{{ val('price_tnd', listing.price_tnd or '') }}" class="{{ input }}">
-        </label>
-        <label class="flex flex-col gap-1.5 font-semibold text-sm">Charges
-          <input name="charges_info" value="{{ val('charges_info', listing.charges_info or '') }}" class="{{ input }}" placeholder="Ex. eau incluse, électricité en sus">
-        </label>
+      <fieldset class="flex flex-col gap-2">
+        <legend class="font-semibold text-sm mb-2">Idéal pour</legend>
+        {% set t = val('target', listing.target or 'tous') %}
+        <div class="grid grid-cols-3 gap-2">
+          {% for v, l in [('tous', 'Tout le monde'), ('etudiants', 'Étudiants'), ('familles', 'Familles')] %}
+            <label class="relative">
+              <input type="radio" name="target" value="{{ v }}" {% if t == v %}checked{% endif %} class="peer sr-only">
+              <span class="min-h-[48px] px-2 flex items-center justify-center text-center rounded-2xl border-[1.5px] border-line text-sm font-bold cursor-pointer peer-checked:border-brand peer-checked:bg-brand-soft peer-focus-visible:ring-2 peer-focus-visible:ring-brand">{{ l }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </fieldset>
+      <div class="grid gap-3 sm:grid-cols-2">
+        {{ toggle('furnished', 'Meublé', listing.furnished, 'Lits, cuisine équipée…') }}
+        {{ toggle('is_colocation', 'Colocation', listing.is_colocation, 'Chambres louées séparément') }}
+      </div>
+      <div id="coloc-options" class="grid gap-3 sm:grid-cols-2">
+        <label class="{{ lbl }}">Places libres<input type="number" min="1" inputmode="numeric" name="coloc_places" value="{{ val('coloc_places', listing.coloc_places or '') }}" class="{{ input }}"></label>
+        <div class="flex items-end">{{ toggle('girls_only', 'Filles uniquement', listing.girls_only) }}</div>
       </div>
     </fieldset>
 
-    <fieldset class="flex flex-col gap-4">
-      <legend class="text-xl font-extrabold mb-3">Emplacement</legend>
-      <div class="grid gap-4 grid-cols-1 sm:grid-cols-2">
-        <label class="flex flex-col gap-1.5 font-semibold text-sm">Gouvernorat
+    {# ---------- Étape 3 ---------- #}
+    <fieldset data-step class="flex flex-col gap-5">
+      <legend class="font-display text-2xl font-extrabold mb-4">Où se trouve le logement ?</legend>
+      <div class="grid gap-4 sm:grid-cols-2">
+        <label class="{{ lbl }}">Gouvernorat
           <select name="governorate" required class="{{ input }}">
             <option value="">Choisir…</option>
             {% for g in governorates %}<option value="{{ g }}" {% if val('governorate', listing.governorate or '') == g %}selected{% endif %}>{{ g }}</option>{% endfor %}
           </select>
         </label>
-        <label class="flex flex-col gap-1.5 font-semibold text-sm">Ville ou quartier
+        <label class="{{ lbl }}">Ville ou quartier
           <input name="city" required value="{{ val('city', listing.city or '') }}" class="{{ input }}" placeholder="El Ghazela">
         </label>
       </div>
-      <p class="text-sm text-muted">Clique sur la carte pour placer le logement. Les locataires ne verront qu'une zone approximative, jamais l'adresse exacte.</p>
-      <div id="picker" class="h-[300px] rounded-xl overflow-hidden border border-line"></div>
+      <div class="flex flex-col gap-2">
+        <span class="font-semibold text-sm">Position sur la carte</span>
+        <div id="picker" class="h-[320px] rounded-2xl overflow-hidden border border-line bg-[#EEF0F6]"></div>
+        <p id="picker-hint" class="text-sm text-muted">Touche la carte pour placer le logement. Les locataires ne verront qu'une zone approximative, jamais l'adresse exacte.</p>
+      </div>
       <input type="hidden" name="latitude" id="lat" value="{{ val('latitude', listing.latitude or '') }}">
       <input type="hidden" name="longitude" id="lng" value="{{ val('longitude', listing.longitude or '') }}">
     </fieldset>
 
-    <fieldset class="flex flex-col gap-3">
-      <legend class="text-xl font-extrabold mb-3">Public et équipements</legend>
-      <label class="flex flex-col gap-1.5 font-semibold text-sm max-w-xs">Idéal pour
-        <select name="target" class="{{ input }}">
-          {% set t = val('target', listing.target or 'tous') %}
-          <option value="tous" {% if t == 'tous' %}selected{% endif %}>Tout le monde</option>
-          <option value="etudiants" {% if t == 'etudiants' %}selected{% endif %}>Étudiants</option>
-          <option value="familles" {% if t == 'familles' %}selected{% endif %}>Familles</option>
-        </select>
-      </label>
-      <label class="flex items-center gap-2.5"><input type="checkbox" name="furnished" value="1" {{ checked('furnished', listing.furnished) }} class="w-[18px] h-[18px]"> Meublé</label>
-      <label class="flex items-center gap-2.5"><input type="checkbox" name="is_colocation" value="1" {{ checked('is_colocation', listing.is_colocation) }} class="w-[18px] h-[18px]"> Colocation</label>
-      <div class="flex flex-wrap gap-4 pl-7">
-        <label class="flex items-center gap-2 text-sm">Places libres <input type="number" min="1" name="coloc_places" value="{{ val('coloc_places', listing.coloc_places or '') }}" class="w-20 px-2 py-1.5 rounded-lg border-[1.5px] border-[#D5DCE5]"></label>
-        <label class="flex items-center gap-2.5 text-sm"><input type="checkbox" name="girls_only" value="1" {{ checked('girls_only', listing.girls_only) }} class="w-[18px] h-[18px]"> Filles uniquement</label>
+    {# ---------- Étape 4 ---------- #}
+    <fieldset data-step class="flex flex-col gap-6">
+      <legend class="font-display text-2xl font-extrabold mb-4">Équipements et photos</legend>
+      <div class="grid gap-3 sm:grid-cols-2">
+        {% for field, label in amenities %}{{ toggle(field, label, listing[field]) }}{% endfor %}
       </div>
-      <div class="grid gap-3 grid-cols-1 sm:grid-cols-2 pt-2">
-        {% for field, label in amenities %}
-          <label class="flex items-center gap-2.5"><input type="checkbox" name="{{ field }}" value="1" {{ checked(field, listing[field]) }} class="w-[18px] h-[18px]"> {{ label }}</label>
-        {% endfor %}
-      </div>
-    </fieldset>
 
-    <fieldset class="flex flex-col gap-3">
-      <legend class="text-xl font-extrabold mb-3">Photos</legend>
-      {% if listing.photos %}
-        <div class="flex flex-wrap gap-2">
-          {% for p in listing.photos %}<img src="{{ url_for('static', filename='uploads/' ~ p.filename) }}" alt="" class="w-24 h-20 object-cover rounded-lg">{% endfor %}
+      <div class="flex flex-col gap-3">
+        <span class="font-semibold text-sm">Photos <span class="font-normal text-muted">(10 maximum · la première sera la photo principale)</span></span>
+        <div id="photo-grid" class="grid gap-3 grid-cols-3 sm:grid-cols-4">
+          {% for p in listing.photos %}
+            <div class="relative aspect-[4/3] rounded-2xl overflow-hidden" data-existing>
+              <img src="{{ url_for('static', filename='uploads/' ~ p.filename) }}" alt="Photo {{ loop.index }}" class="w-full h-full object-cover">
+              {% if loop.first %}<span class="absolute left-2 top-2 px-2 py-0.5 rounded-full bg-white text-[11px] font-bold">Principale</span>{% endif %}
+              <button type="button" data-delete-photo="{{ url_for('listings.delete_photo', photo_id=p.id) }}" aria-label="Supprimer la photo {{ loop.index }}"
+                      class="absolute right-2 top-2 w-8 h-8 rounded-full bg-ink/75 text-white flex items-center justify-center hover:bg-ink">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+              </button>
+            </div>
+          {% endfor %}
+          <label id="photo-add" class="aspect-[4/3] rounded-2xl border-2 border-dashed border-[#B9C3F5] bg-brand-soft hover:bg-[#E3E8FF] flex flex-col items-center justify-center gap-1 cursor-pointer text-brand-dark text-center p-2">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            <span class="text-sm font-bold">Ajouter</span>
+            <input type="file" id="photos" name="photos" multiple accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" class="sr-only">
+          </label>
         </div>
-      {% endif %}
-      <label class="flex flex-col gap-1.5 font-semibold text-sm">Ajouter des photos (JPG, PNG ou WEBP, 10 maximum)
-        <input type="file" name="photos" multiple accept=".jpg,.jpeg,.png,.webp" class="text-sm font-normal">
-      </label>
+        <p class="text-sm text-muted">Astuce : des photos lumineuses, prises en mode paysage, de chaque pièce.</p>
+      </div>
+
+      {# Aperçu #}
+      <div class="flex flex-col gap-2">
+        <span class="font-semibold text-sm">Aperçu de ton annonce</span>
+        <div class="p-3 rounded-3xl border border-line flex gap-4 items-center">
+          <div id="preview-img" class="w-28 h-24 rounded-2xl bg-brand-photo shrink-0 bg-cover bg-center"
+               {% if listing.cover %}style="background-image:url('{{ url_for('static', filename='uploads/' ~ listing.cover.filename) }}')"{% endif %}></div>
+          <div class="min-w-0 flex flex-col gap-0.5">
+            <span id="preview-title" class="font-display text-lg font-bold leading-tight truncate">{{ listing.title or 'Titre de ton annonce' }}</span>
+            <span id="preview-place" class="text-sm text-muted">{{ (listing.city ~ ', ' ~ listing.governorate) if listing.city else 'Quartier, gouvernorat' }}</span>
+            <span class="text-lg font-extrabold"><span id="preview-price">{{ listing.price_tnd|tnd if listing.price_tnd else '—' }}</span> <span class="text-sm font-medium text-muted">TND / mois</span></span>
+          </div>
+        </div>
+      </div>
     </fieldset>
 
-    <button type="submit" class="self-start min-h-[52px] px-8 rounded-xl bg-brand hover:bg-brand-dark text-white font-bold">{{ 'Enregistrer' if editing else 'Publier mon annonce' }}</button>
+    {# Navigation #}
+    <div class="sticky bottom-0 -mx-4 sm:mx-0 px-4 sm:px-0 py-4 bg-white/95 backdrop-blur border-t border-line sm:border-0 flex items-center justify-between gap-3">
+      <button type="button" id="prev-btn" class="hidden min-h-[52px] px-5 rounded-full border-[1.5px] border-line font-bold hover:border-ink">Retour</button>
+      <span class="flex-1"></span>
+      <button type="button" id="next-btn" class="hidden min-h-[52px] px-7 rounded-full bg-ink text-white font-bold hover:bg-slate-800">Continuer</button>
+      <button type="submit" id="submit-btn" class="min-h-[52px] px-7 rounded-full bg-brand hover:bg-brand-dark text-white font-bold">{{ 'Enregistrer' if editing else 'Publier mon annonce' }}</button>
+    </div>
   </form>
 </div>
+{% endblock %}
 
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+{% block footer %}{% endblock %}
+
+{% block scripts %}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-  (function () {
+(function () {
+  var form = document.getElementById('listing-form');
+  var steps = Array.prototype.slice.call(form.querySelectorAll('[data-step]'));
+  var stepper = document.getElementById('stepper');
+  var prev = document.getElementById('prev-btn'), next = document.getElementById('next-btn'), submit = document.getElementById('submit-btn');
+  var editing = {{ 'true' if editing else 'false' }};
+  var cur = 0, reached = editing ? steps.length - 1 : 0;
+
+  // Les étapes ne sont activées que si JavaScript fonctionne : sinon le formulaire reste complet.
+  stepper.classList.remove('hidden'); stepper.classList.add('grid');
+
+  function valid(i) {
+    var fields = steps[i].querySelectorAll('input, select, textarea');
+    for (var k = 0; k < fields.length; k++) {
+      if (!fields[k].checkValidity()) { fields[k].reportValidity(); return false; }
+    }
+    return true;
+  }
+  function show(i) {
+    cur = i; reached = Math.max(reached, i);
+    steps.forEach(function (s, k) { s.hidden = k !== i; });
+    stepper.querySelectorAll('[data-goto]').forEach(function (b, k) {
+      b.querySelector('[data-bar]').style.width = k <= i ? '100%' : '0';
+      b.querySelector('[data-label]').classList.toggle('text-ink', k <= i);
+      b.disabled = k > reached;
+      if (k === i) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current');
+    });
+    prev.classList.toggle('hidden', i === 0);
+    next.classList.toggle('hidden', i === steps.length - 1);
+    submit.classList.toggle('hidden', i !== steps.length - 1 && !editing);
+    if (i === 2) initMap();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  next.addEventListener('click', function () { if (valid(cur)) show(cur + 1); });
+  prev.addEventListener('click', function () { show(cur - 1); });
+  stepper.querySelectorAll('[data-goto]').forEach(function (b) {
+    b.addEventListener('click', function () { var to = +b.dataset.goto; if (to <= reached && (to < cur || valid(cur))) show(to); });
+  });
+  form.addEventListener('submit', function (e) {
+    for (var i = 0; i < steps.length; i++) { if (!steps[i].querySelector(':invalid')) continue; show(i); valid(i); e.preventDefault(); return; }
+  });
+  // Entrée dans un champ = étape suivante (au lieu d'envoyer le formulaire trop tôt)
+  form.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && e.target.tagName === 'INPUT' && cur < steps.length - 1) { e.preventDefault(); next.click(); }
+  });
+
+  /* ---------- Compteur de description + colocation ---------- */
+  var desc = form.elements['description'], count = form.querySelector('[data-count="description"]');
+  function upd() { count.textContent = desc.value.length; }
+  desc.addEventListener('input', upd); upd();
+  var coloc = form.elements['is_colocation'], colocOpts = document.getElementById('coloc-options');
+  function updColoc() { colocOpts.hidden = !coloc.checked; }
+  coloc.addEventListener('change', updColoc); updColoc();
+
+  /* ---------- Carte ---------- */
+  var map = null;
+  function initMap() {
+    if (map) { setTimeout(function () { map.invalidateSize(); }, 50); return; }
     var lat = document.getElementById('lat'), lng = document.getElementById('lng');
     var start = lat.value ? [parseFloat(lat.value), parseFloat(lng.value)] : [36.8065, 10.1815];
-    var map = L.map('picker').setView(start, lat.value ? 15 : 11);
+    map = L.map('picker').setView(start, lat.value ? 15 : 11);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(map);
     var marker = lat.value ? L.marker(start).addTo(map) : null;
     map.on('click', function (e) {
-      lat.value = e.latlng.lat.toFixed(6);
-      lng.value = e.latlng.lng.toFixed(6);
-      if (marker) { marker.setLatLng(e.latlng); } else { marker = L.marker(e.latlng).addTo(map); }
+      lat.value = e.latlng.lat.toFixed(6); lng.value = e.latlng.lng.toFixed(6);
+      if (marker) marker.setLatLng(e.latlng); else marker = L.marker(e.latlng).addTo(map);
+      document.getElementById('picker-hint').textContent = 'Position enregistrée. Tu peux la déplacer en touchant ailleurs.';
     });
-  })();
+    setTimeout(function () { map.invalidateSize(); }, 50);
+  }
+
+  /* ---------- Photos : aperçu, ajout progressif, suppression ---------- */
+  var input = document.getElementById('photos'), grid = document.getElementById('photo-grid'), add = document.getElementById('photo-add');
+  var files = [], MAX = 10;
+  function existingCount() { return grid.querySelectorAll('[data-existing]').length; }
+  function sync() {
+    var dt = new DataTransfer(); files.forEach(function (f) { dt.items.add(f); }); input.files = dt.files;
+    grid.querySelectorAll('[data-new]').forEach(function (n) { n.remove(); });
+    files.forEach(function (f, i) {
+      var url = URL.createObjectURL(f);
+      var box = document.createElement('div');
+      box.className = 'relative aspect-[4/3] rounded-2xl overflow-hidden'; box.setAttribute('data-new', '');
+      var img = document.createElement('img'); img.src = url; img.alt = 'Nouvelle photo ' + (i + 1); img.className = 'w-full h-full object-cover';
+      var del = document.createElement('button'); del.type = 'button'; del.setAttribute('aria-label', 'Retirer la nouvelle photo ' + (i + 1));
+      del.className = 'absolute right-2 top-2 w-8 h-8 rounded-full bg-ink/75 text-white flex items-center justify-center hover:bg-ink';
+      del.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+      del.addEventListener('click', function () { files.splice(i, 1); sync(); });
+      box.appendChild(img); box.appendChild(del);
+      if (i === 0 && !existingCount()) {
+        var b = document.createElement('span'); b.className = 'absolute left-2 top-2 px-2 py-0.5 rounded-full bg-white text-[11px] font-bold'; b.textContent = 'Principale'; box.appendChild(b);
+      }
+      grid.insertBefore(box, add);
+    });
+    add.hidden = existingCount() + files.length >= MAX;
+    updPreview();
+  }
+  input.addEventListener('change', function () {
+    Array.prototype.forEach.call(input.files, function (f) { if (existingCount() + files.length < MAX && /^image\//.test(f.type)) files.push(f); });
+    sync();
+  });
+  var csrf = form.elements['csrf_token'].value;
+  grid.querySelectorAll('[data-delete-photo]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      if (!confirm('Supprimer cette photo ?')) return;
+      fetch(b.dataset.deletePhoto, { method: 'POST', headers: { 'X-CSRFToken': csrf, 'X-Requested-With': 'fetch', 'Accept': 'application/json' } })
+        .then(function (r) { if (r.ok) { b.closest('[data-existing]').remove(); add.hidden = false; } else alert('Impossible de supprimer la photo.'); });
+    });
+  });
+
+  /* ---------- Aperçu ---------- */
+  function updPreview() {
+    var t = form.elements['title'].value.trim(), p = form.elements['price_tnd'].value;
+    var c = form.elements['city'].value.trim(), g = form.elements['governorate'].value;
+    document.getElementById('preview-title').textContent = t || 'Titre de ton annonce';
+    document.getElementById('preview-price').textContent = p ? String(p).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') : '—';
+    document.getElementById('preview-place').textContent = c || g ? [c, g].filter(Boolean).join(', ') : 'Quartier, gouvernorat';
+    var first = grid.querySelector('img');
+    if (first) document.getElementById('preview-img').style.backgroundImage = 'url(' + first.src + ')';
+  }
+  form.addEventListener('input', updPreview);
+
+  show(0);
+})();
 </script>
 {% endblock %}

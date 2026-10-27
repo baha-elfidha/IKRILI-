@@ -1,6 +1,7 @@
+import os
 from datetime import datetime
 
-from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
+from flask import Blueprint, abort, current_app, flash, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
 from app import db
@@ -115,6 +116,24 @@ def edit(listing_id):
                            amenities=Listing.AMENITIES, editing=True)
 
 
+@bp.route("/photo/<int:photo_id>/supprimer", methods=["POST"])
+@login_required
+def delete_photo(photo_id):
+    photo = db.get_or_404(Photo, photo_id)
+    listing = _owned_or_404(photo.listing_id)
+    path = os.path.join(current_app.config["UPLOAD_FOLDER"], photo.filename)
+    db.session.delete(photo)
+    for i, p in enumerate(p for p in listing.photos if p.id != photo_id):
+        p.position = i
+    db.session.commit()
+    if os.path.exists(path):
+        os.remove(path)
+    if request.accept_mimetypes.best == "application/json" or request.headers.get("X-Requested-With"):
+        return jsonify(ok=True)
+    flash("Photo supprimée.", "success")
+    return redirect(url_for("listings.edit", listing_id=listing.id))
+
+
 @bp.route("/annonce/<int:listing_id>/statut", methods=["POST"])
 @login_required
 def toggle_active(listing_id):
@@ -144,7 +163,15 @@ def dashboard():
                 .order_by(ContactRequest.created_at.desc()).all())
     sent = (ContactRequest.query.filter_by(sender_id=current_user.id)
             .order_by(ContactRequest.created_at.desc()).all())
-    return render_template("dashboard.html", my_listings=my_listings, received=received, sent=sent)
+    stats = {
+        "online": sum(1 for l in my_listings if l.is_active),
+        "new": sum(1 for r in received if r.status == "nouveau"),
+        "accepted": sum(1 for r in received if r.status == "accepte"),
+        "favs": sum(len(l.favorited_by) for l in my_listings),
+    }
+    tab = request.args.get("onglet", "demandes" if stats["new"] else "annonces")
+    return render_template("dashboard.html", my_listings=my_listings, received=received, sent=sent,
+                           stats=stats, tab=tab)
 
 
 @bp.route("/demande/<int:request_id>/<action>", methods=["POST"])
@@ -156,4 +183,4 @@ def answer_request(request_id, action):
     if action in ("accepte", "refuse", "lu"):
         req.status = action
         db.session.commit()
-    return redirect(url_for("listings.dashboard"))
+    return redirect(url_for("listings.dashboard", onglet="demandes"))

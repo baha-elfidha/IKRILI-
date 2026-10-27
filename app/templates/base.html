@@ -5,18 +5,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}IKRILI – Logements à louer en Tunisie{% endblock %}</title>
   <meta name="description" content="{% block meta_description %}Appartements, maisons et colocations à louer en Tunisie pour étudiants et familles. Annonces vérifiées.{% endblock %}">
-  <meta name="theme-color" content="#1F5FA8">
+  <meta name="theme-color" content="#2D4BF0">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
       theme: {
         extend: {
-          fontFamily: { sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'] },
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+            display: ['"Bricolage Grotesque"', '"Plus Jakarta Sans"', 'system-ui', 'sans-serif']
+          },
           colors: {
-            brand: { DEFAULT: '#1F5FA8', dark: '#174A84', soft: '#EEF3F9', photo: '#DCE6F2' },
-            ink: '#0F1B2D', muted: '#4A5568', line: '#E4E8EE', ok: '#146C43', okbg: '#E6F4EC', warn: '#B4462B'
+            brand: { DEFAULT: '#2D4BF0', dark: '#1E36C7', soft: '#EEF1FF', photo: '#DDE3FF' },
+            pop: { DEFAULT: '#FF6B4A', soft: '#FFF1EC' },
+            sun: { DEFAULT: '#FFD23F', soft: '#FFF8DB' },
+            ink: '#0E1530', muted: '#4B5470', line: '#E6E8F0', ok: '#0F7B4D', okbg: '#E3F6EC', warn: '#C2410C'
           }
         }
       }
@@ -25,21 +31,23 @@
   <style>
     .no-scrollbar { scrollbar-width: none; } .no-scrollbar::-webkit-scrollbar { display: none; }
     body.lock { overflow: hidden; }
+    [hidden] { display: none !important; }
+    h1, h2, h3 { font-family: "Bricolage Grotesque", "Plus Jakarta Sans", system-ui, sans-serif; letter-spacing: -0.02em; }
+    /* Surlignage « marqueur » pour les mots clés des titres */
+    .mark { background: linear-gradient(transparent 58%, #FFD23F 58%, #FFD23F 92%, transparent 92%); padding: 0 .08em; }
+    :focus-visible { outline: 3px solid #2D4BF0; outline-offset: 2px; }
   </style>
   {% block head %}{% endblock %}
 </head>
 <body class="bg-white text-ink font-sans antialiased min-h-screen flex flex-col">
 
+{% from "_macros.html" import logo %}
+{% set page_width = page_width|default('max-w-6xl') %}
 <header class="border-b border-line bg-white relative z-[1100]">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
-    <a href="{{ url_for('main.index') }}" class="flex items-center gap-2.5 text-ink">
-      <span class="w-9 h-9 rounded-lg bg-brand flex items-center justify-center">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg>
-      </span>
-      <span class="text-xl font-extrabold tracking-wider">IKRILI</span>
-    </a>
+  <div class="{{ page_width }} mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
+    <a href="{{ url_for('main.index') }}" class="text-ink" aria-label="IKRILI – accueil">{{ logo() }}</a>
 
-    {% set navlink = "px-3 py-2.5 rounded-lg text-slate-700 hover:text-brand hover:bg-slate-50" %}
+    {% set navlink = "px-3 py-2.5 rounded-full text-slate-700 hover:text-ink hover:bg-slate-100" %}
     <nav aria-label="Navigation principale" class="hidden md:flex items-center gap-1 text-[15px] font-semibold">
       <a href="{{ url_for('main.search') }}" class="{{ navlink }}">Louer</a>
       <a href="{{ url_for('main.search', coloc=1) }}" class="{{ navlink }}">Colocation</a>
@@ -50,7 +58,10 @@
       {% else %}
         <a href="{{ url_for('auth.login') }}" class="{{ navlink }}">Connexion</a>
       {% endif %}
-      <a href="{{ url_for('listings.create') }}" class="ml-1 px-4 py-2.5 rounded-lg bg-ink text-white hover:bg-slate-800">Publier une annonce</a>
+      <a href="{{ url_for('listings.create') }}" class="ml-2 pl-3.5 pr-4 py-2.5 rounded-full bg-brand text-white hover:bg-brand-dark flex items-center gap-1.5 shadow-[0_6px_16px_-6px_rgba(45,75,240,.6)]">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        Publier une annonce
+      </a>
     </nav>
 
     <button type="button" id="menu-btn" class="md:hidden w-11 h-11 -mr-2 rounded-lg flex items-center justify-center hover:bg-slate-50"
@@ -73,14 +84,14 @@
         <a href="{{ url_for('auth.login') }}" class="{{ mlink }}">Connexion</a>
         <a href="{{ url_for('auth.register') }}" class="{{ mlink }}">Créer un compte</a>
       {% endif %}
-      <a href="{{ url_for('listings.create') }}" class="mt-2 mb-1 px-4 py-3.5 rounded-xl bg-ink text-white text-center">Publier une annonce</a>
+      <a href="{{ url_for('listings.create') }}" class="mt-2 mb-1 px-4 py-3.5 rounded-full bg-brand text-white text-center">+ Publier une annonce</a>
     </div>
   </nav>
 </header>
 
 {% with messages = get_flashed_messages(with_categories=true) %}
   {% if messages %}
-  <div class="max-w-7xl mx-auto w-full px-4 sm:px-6 pt-4 space-y-2" role="status">
+  <div class="{{ page_width }} mx-auto w-full px-4 sm:px-6 pt-4 space-y-2" role="status">
     {% for category, message in messages %}
       <div class="px-4 py-3 rounded-xl text-[15px] font-semibold
         {% if category == 'error' %}bg-red-50 text-red-800{% elif category == 'success' %}bg-okbg text-ok{% else %}bg-brand-soft text-brand-dark{% endif %}">
@@ -96,15 +107,29 @@
 </main>
 
 {% block footer %}
-<footer class="border-t border-line mt-12">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 py-7 flex flex-wrap justify-between gap-4 text-sm text-muted">
-    <span><strong class="text-ink tracking-wider">IKRILI</strong> · Location de logements en Tunisie</span>
-    <div class="flex flex-wrap gap-x-5 gap-y-2">
-      <a href="{{ url_for('main.safety') }}" class="hover:text-brand">Conseils anti-arnaque</a>
-      <a href="{{ url_for('main.terms') }}" class="hover:text-brand">Conditions d'utilisation</a>
-      <a href="{{ url_for('main.privacy') }}" class="hover:text-brand">Confidentialité</a>
-      <a href="mailto:{{ config['CONTACT_EMAIL'] }}" class="hover:text-brand">Contact</a>
+<footer class="mt-16 bg-ink text-[#C5CAE0]">
+  <div class="{{ page_width }} mx-auto px-4 sm:px-6 py-12 grid gap-10 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 text-[15px]">
+    <div class="flex flex-col gap-3 lg:col-span-2 max-w-sm">
+      <a href="{{ url_for('main.index') }}" class="text-white self-start">{{ logo(32, 'text-xl') }}</a>
+      <p class="leading-relaxed">Le logement à louer en Tunisie, simplement. Pour les étudiants, les familles et les propriétaires.</p>
     </div>
+    <nav aria-label="Liens utiles" class="flex flex-col gap-2.5">
+      <span class="text-white font-bold mb-1">Chercher</span>
+      <a href="{{ url_for('main.search', pour='etudiants') }}" class="hover:text-white">Logement étudiant</a>
+      <a href="{{ url_for('main.search', pour='familles') }}" class="hover:text-white">Logement familial</a>
+      <a href="{{ url_for('main.search', coloc=1) }}" class="hover:text-white">Colocation</a>
+      <a href="{{ url_for('listings.create') }}" class="hover:text-white">Publier une annonce</a>
+    </nav>
+    <nav aria-label="Informations" class="flex flex-col gap-2.5">
+      <span class="text-white font-bold mb-1">IKRILI</span>
+      <a href="{{ url_for('main.safety') }}" class="hover:text-white">Conseils anti-arnaque</a>
+      <a href="{{ url_for('main.terms') }}" class="hover:text-white">Conditions d'utilisation</a>
+      <a href="{{ url_for('main.privacy') }}" class="hover:text-white">Confidentialité</a>
+      <a href="mailto:{{ config['CONTACT_EMAIL'] }}" class="hover:text-white">Contact</a>
+    </nav>
+  </div>
+  <div class="border-t border-white/10">
+    <div class="{{ page_width }} mx-auto px-4 sm:px-6 py-5 text-sm">© {{ now_year }} IKRILI · Fait en Tunisie</div>
   </div>
 </footer>
 {% endblock %}

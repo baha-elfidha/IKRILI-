@@ -38,6 +38,12 @@ def create_app(config_class=Config):
     from app.utils import format_price
     app.jinja_env.filters["tnd"] = format_price
 
+    from datetime import date
+
+    @app.context_processor
+    def inject_globals():
+        return {"now_year": date.today().year}
+
     with app.app_context():
         db.create_all()
         # Ferme les connexions ouvertes au démarrage : chaque worker gunicorn

@@ -11,9 +11,28 @@ bp = Blueprint("main", __name__)
 @bp.route("/")
 def index():
     universities = University.query.order_by(University.name).all()
-    recent = (Listing.query.filter_by(is_active=True)
-              .order_by(Listing.created_at.desc()).limit(8).all())
-    return render_template("index.html", universities=universities, recent=recent,
+    active = Listing.query.filter_by(is_active=True)
+    recent = active.order_by(Listing.created_at.desc()).limit(8).all()
+
+    # Annonce mise en avant dans le bandeau : la plus récente avec photo
+    featured = next((l for l in recent if l.cover), recent[0] if recent else None)
+
+    # Quartiers les plus fournis (données réelles)
+    areas = (db.session.query(Listing.city, Listing.governorate, db.func.count(Listing.id),
+                              db.func.min(Listing.price_tnd))
+             .filter(Listing.is_active.is_(True))
+             .group_by(Listing.city, Listing.governorate)
+             .order_by(db.func.count(Listing.id).desc()).limit(6).all())
+
+    # Nombre d'annonces à moins de 20 min à pied de chaque université
+    located = [l for l in active.all() if l.latitude is not None]
+    uni_counts = {}
+    for u in universities:
+        uni_counts[u.id] = sum(1 for l in located if walking_minutes(
+            haversine_km(u.latitude, u.longitude, l.latitude, l.longitude)) <= 20)
+
+    return render_template("index.html", universities=universities, recent=recent, featured=featured,
+                           areas=areas, uni_counts=uni_counts, total=active.count(),
                            property_types=PROPERTY_TYPES)
 
 

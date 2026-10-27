@@ -1,100 +1,219 @@
 {% extends "base.html" %}
-{% from "_macros.html" import listing_card %}
+{% from "_macros.html" import listing_card, photo_placeholder, verified_badge %}
 {% block content %}
 
-<section class="bg-brand-soft">
-  <div class="max-w-6xl mx-auto px-4 sm:px-6 pt-16 pb-14 flex flex-col gap-7">
-    <div class="flex flex-wrap gap-2">
-      <span class="px-3 py-1.5 rounded-full bg-white text-[13px] font-semibold text-slate-700">Étudiants</span>
-      <span class="px-3 py-1.5 rounded-full bg-white text-[13px] font-semibold text-slate-700">Familles</span>
-      <span class="px-3 py-1.5 rounded-full bg-white text-[13px] font-semibold text-slate-700">Partout en Tunisie</span>
-    </div>
-    <h1 class="text-4xl sm:text-6xl font-extrabold leading-[1.05] tracking-tight max-w-3xl">Trouve ton logement à louer, sans passer par dix groupes Facebook.</h1>
-    <p class="text-lg text-muted max-w-2xl leading-relaxed">Appartements, maisons et chambres en colocation, avec des annonces vérifiées et des filtres pensés pour les étudiants comme pour les familles.</p>
+{# ================= BANDEAU ================= #}
+<section class="relative overflow-hidden bg-brand-soft">
+  <div aria-hidden="true" class="pointer-events-none absolute -top-24 -right-24 w-[420px] h-[420px] rounded-full bg-pop/20"></div>
+  <div aria-hidden="true" class="pointer-events-none absolute bottom-[-140px] left-[38%] w-[320px] h-[320px] rounded-full bg-sun/40"></div>
 
-    <form action="{{ url_for('main.search') }}" method="get" role="search" aria-label="Rechercher un logement"
-          class="bg-white rounded-2xl p-3 flex flex-wrap gap-2 items-end shadow-[0_8px_30px_rgba(15,27,45,0.08)] max-w-5xl">
-      <label class="flex-[2_1_240px] flex flex-col gap-1.5 px-2.5 py-1.5">
-        <span class="text-xs font-bold uppercase tracking-wider text-muted">Ville ou quartier</span>
-        <input name="q" type="text" placeholder="Ex. El Ghazela, Ariana, La Marsa…" class="outline-none text-base py-1.5 bg-transparent">
-      </label>
-      <label class="flex-[1_1_170px] flex flex-col gap-1.5 px-2.5 py-1.5 sm:border-l border-line">
-        <span class="text-xs font-bold uppercase tracking-wider text-muted">Type</span>
-        <select name="type" class="outline-none text-base py-1.5 bg-transparent">
-          <option value="">Tous les types</option>
-          {% for value, label in property_types %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
-        </select>
-      </label>
-      <label class="flex-[1_1_150px] flex flex-col gap-1.5 px-2.5 py-1.5 sm:border-l border-line">
-        <span class="text-xs font-bold uppercase tracking-wider text-muted">Budget max (TND)</span>
-        <input name="max" type="number" min="0" placeholder="800" class="outline-none text-base py-1.5 bg-transparent">
-      </label>
-      <button type="submit" class="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-4 rounded-xl bg-brand hover:bg-brand-dark text-white font-bold">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
-        Rechercher
-      </button>
-    </form>
+  <div class="relative max-w-6xl mx-auto px-4 sm:px-6 pt-12 pb-14 sm:pt-16 sm:pb-20 grid gap-12 lg:grid-cols-[1.15fr_0.85fr] items-center">
+    <div class="flex flex-col gap-6">
+      <span class="self-start inline-flex items-center gap-2 pl-1.5 pr-3.5 py-1.5 rounded-full bg-white text-[13px] font-bold shadow-sm">
+        <span class="px-2 py-0.5 rounded-full bg-pop text-ink text-[11px] uppercase tracking-wider">Gratuit</span>
+        Étudiants, familles et colocations
+      </span>
+      <h1 class="text-[42px] leading-[1.02] sm:text-6xl lg:text-[68px] font-extrabold text-ink">
+        Trouve ton logement à louer, <span class="mark">sans galère.</span>
+      </h1>
+      <p class="text-lg text-muted max-w-xl leading-relaxed">Fini les dix groupes Facebook. Des annonces vérifiées, la distance à ta fac en un coup d'œil et le contact direct avec le propriétaire.</p>
 
-    <div class="flex flex-wrap gap-3">
-      <a href="{{ url_for('main.search', pour='etudiants') }}" class="px-4 py-3 rounded-xl border-[1.5px] border-[#C9D6E6] bg-white font-semibold hover:border-brand">Je suis étudiant·e</a>
-      <a href="{{ url_for('main.search', pour='familles') }}" class="px-4 py-3 rounded-xl border-[1.5px] border-[#C9D6E6] bg-white font-semibold hover:border-brand">Je cherche pour ma famille</a>
+      <form action="{{ url_for('main.search') }}" method="get" role="search" aria-label="Rechercher un logement"
+            class="bg-white rounded-3xl p-2.5 shadow-[0_20px_50px_-20px_rgba(14,21,48,0.35)] flex flex-col gap-2.5">
+        <fieldset class="flex gap-1 p-1 rounded-2xl bg-slate-100 self-start">
+          <legend class="sr-only">Je cherche pour</legend>
+          {% for value, label in [('', 'Tout'), ('etudiants', 'Étudiant·e'), ('familles', 'Famille')] %}
+            <label>
+              <input type="radio" name="pour" value="{{ value }}" {% if loop.first %}checked{% endif %} class="peer sr-only">
+              <span class="block px-4 py-2 rounded-xl text-sm font-bold text-muted cursor-pointer peer-checked:bg-white peer-checked:text-ink peer-checked:shadow-sm peer-focus-visible:ring-2 peer-focus-visible:ring-brand">{{ label }}</span>
+            </label>
+          {% endfor %}
+        </fieldset>
+        <div class="flex flex-col gap-1 sm:grid sm:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-stretch">
+          <label class="flex flex-col gap-0.5 px-4 py-2.5 rounded-2xl hover:bg-slate-50">
+            <span class="text-[11px] font-extrabold uppercase tracking-wider text-muted">Où ?</span>
+            <input name="q" type="text" placeholder="Quartier, ville… ex. El Ghazela" class="outline-none text-base bg-transparent placeholder:text-slate-400">
+          </label>
+          <label class="flex flex-col gap-0.5 px-4 py-2.5 rounded-2xl hover:bg-slate-50 sm:border-l border-line">
+            <span class="text-[11px] font-extrabold uppercase tracking-wider text-muted">Type</span>
+            <select name="type" class="outline-none text-base bg-transparent -ml-1">
+              <option value="">Tous</option>
+              {% for value, label in property_types %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+            </select>
+          </label>
+          <label class="flex flex-col gap-0.5 px-4 py-2.5 rounded-2xl hover:bg-slate-50 sm:border-l border-line">
+            <span class="text-[11px] font-extrabold uppercase tracking-wider text-muted whitespace-nowrap">Budget max</span>
+            <span class="flex items-baseline gap-1"><input name="max" type="number" min="0" inputmode="numeric" placeholder="800" class="w-full outline-none text-base bg-transparent placeholder:text-slate-400"><span class="text-sm text-muted">TND</span></span>
+          </label>
+          <button type="submit" class="min-h-[56px] px-7 rounded-2xl bg-brand hover:bg-brand-dark text-white font-bold flex items-center justify-center gap-2">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+            Rechercher
+          </button>
+        </div>
+      </form>
     </div>
+
+    {# Visuel : une vraie annonce récente #}
+    {% if featured %}
+    <div class="hidden lg:block relative h-[460px]" aria-hidden="true">
+      <div class="absolute inset-x-8 top-6 bottom-10 rounded-[32px] bg-brand rotate-[5deg]"></div>
+      <a href="{{ url_for('main.listing_detail', listing_id=featured.id) }}" tabindex="-1"
+         class="absolute inset-x-4 top-0 rounded-[28px] bg-white p-3 shadow-[0_30px_60px_-25px_rgba(14,21,48,0.45)] -rotate-[2deg] hover:rotate-0 transition-transform">
+        {% if featured.cover %}
+          <img src="{{ url_for('static', filename='uploads/' ~ featured.cover.filename) }}" alt="" class="w-full h-[250px] object-cover rounded-[20px]">
+        {% else %}
+          {{ photo_placeholder('Photo du logement', 'h-[250px]') }}
+        {% endif %}
+        <div class="px-2 pt-4 pb-2 flex flex-col gap-1">
+          <span class="font-display text-xl font-bold leading-tight">{{ featured.title }}</span>
+          <span class="text-sm text-muted">{{ featured.city }}, {{ featured.governorate }}</span>
+          <span class="mt-1 text-2xl font-extrabold">{{ featured.price_tnd|tnd }} <span class="text-sm font-medium text-muted">TND / mois</span></span>
+        </div>
+      </a>
+      {% if featured.is_verified %}
+        <span class="absolute -left-2 top-16 rotate-[-6deg] px-3 py-2 rounded-2xl bg-white shadow-lg">{{ verified_badge('Annonce vérifiée') }}</span>
+      {% endif %}
+      <span class="absolute -right-3 -top-4 rotate-[4deg] px-4 py-3 rounded-2xl bg-sun text-ink font-extrabold shadow-lg">
+        {{ total }} annonce{{ 's' if total != 1 }} en ligne
+      </span>
+    </div>
+    {% endif %}
   </div>
 </section>
 
+{# ================= COMMENT ÇA MARCHE ================= #}
+<section class="max-w-6xl mx-auto px-4 sm:px-6 pt-16 sm:pt-20 flex flex-col gap-8">
+  <div class="flex flex-col gap-2 max-w-2xl">
+    <span class="text-sm font-extrabold uppercase tracking-wider text-brand">Comment ça marche</span>
+    <h2 class="text-3xl sm:text-4xl font-extrabold">Simple pour tout le monde</h2>
+  </div>
+  <div class="grid gap-5 md:grid-cols-2">
+    {% for who, color, steps, cta, url in [
+      ('Tu cherches un logement', 'bg-brand-soft', [('Cherche', 'Filtre par quartier, budget, distance à ta fac ou nombre de chambres.'), ('Contacte', 'Demande une visite ou écris directement au propriétaire.'), ('Visite', 'Visite avant de payer quoi que ce soit, puis signe ton contrat.')], 'Chercher un logement', url_for('main.search')),
+      ('Tu loues un logement', 'bg-pop-soft', [('Publie', 'Ajoute photos, prix et position en 4 étapes, gratuitement.'), ('Reçois', 'Les demandes de visite arrivent dans ton espace propriétaire.'), ('Choisis', 'Accepte les visites qui te conviennent et loue sereinement.')], 'Publier une annonce', url_for('listings.create')),
+    ] %}
+      <div class="{{ color }} rounded-3xl p-6 sm:p-8 flex flex-col gap-6">
+        <h3 class="text-2xl font-extrabold">{{ who }}</h3>
+        <ol class="flex flex-col gap-5">
+          {% for title, text in steps %}
+            <li class="flex gap-4">
+              <span class="shrink-0 w-11 h-11 rounded-2xl {{ 'bg-brand text-white' if loop.index == 1 else 'bg-white text-ink' }} font-display text-xl font-extrabold flex items-center justify-center">{{ loop.index }}</span>
+              <span class="flex flex-col gap-0.5"><strong class="text-[17px]">{{ title }}</strong><span class="text-muted leading-relaxed">{{ text }}</span></span>
+            </li>
+          {% endfor %}
+        </ol>
+        <a href="{{ url }}" class="self-start min-h-[48px] px-5 rounded-full bg-ink text-white font-bold flex items-center gap-2 hover:bg-slate-800">
+          {{ cta }}
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </a>
+      </div>
+    {% endfor %}
+  </div>
+</section>
+
+{# ================= UNIVERSITÉS ================= #}
 {% if universities %}
-<section class="max-w-6xl mx-auto px-4 sm:px-6 pt-14 flex flex-col gap-5">
-  <h2 class="text-3xl font-extrabold tracking-tight">Près de ton université</h2>
-  <div class="flex flex-wrap gap-2.5">
+<section class="max-w-6xl mx-auto px-4 sm:px-6 pt-16 sm:pt-20 flex flex-col gap-6">
+  <div class="flex flex-col gap-2">
+    <span class="text-sm font-extrabold uppercase tracking-wider text-brand">Pour les étudiants</span>
+    <h2 class="text-3xl sm:text-4xl font-extrabold">À moins de 20 min de ta fac</h2>
+  </div>
+  <div class="grid gap-3 grid-cols-2 md:grid-cols-3">
     {% for u in universities %}
-      <a href="{{ url_for('main.search', universite=u.id, minutes=20, tri='proche') }}" class="flex flex-col px-4 py-3.5 rounded-xl bg-slate-50 hover:bg-brand-soft min-w-[170px]">
-        <span class="font-bold">{{ u.name }}</span>
-        <span class="text-[13px] text-muted">{{ u.zone }}</span>
+      {% set c = uni_counts.get(u.id, 0) %}
+      <a href="{{ url_for('main.search', universite=u.id, minutes=20, tri='proche') }}"
+         class="group p-4 sm:p-5 rounded-2xl border-[1.5px] border-line hover:border-brand hover:bg-brand-soft flex items-center justify-between gap-3 transition-colors">
+        <span class="flex flex-col min-w-0">
+          <span class="font-display text-lg font-bold">{{ u.name }}</span>
+          <span class="text-[13px] text-muted truncate">{{ u.zone }}</span>
+        </span>
+        <span class="shrink-0 min-w-[44px] h-[44px] px-2 rounded-full {{ 'bg-brand text-white' if c else 'bg-slate-100 text-muted' }} font-extrabold flex items-center justify-center" aria-label="{{ c }} annonce{{ 's' if c != 1 }}">{{ c }}</span>
       </a>
     {% endfor %}
   </div>
 </section>
 {% endif %}
 
-<section class="max-w-6xl mx-auto px-4 sm:px-6 pt-12 flex flex-col gap-5">
-  <div class="flex flex-wrap items-baseline justify-between gap-3">
-    <h2 class="text-3xl font-extrabold tracking-tight">Annonces récentes</h2>
-    <a href="{{ url_for('main.search') }}" class="font-semibold text-brand">Voir toutes les annonces</a>
+{# ================= QUARTIERS ================= #}
+{% if areas %}
+<section class="max-w-6xl mx-auto px-4 sm:px-6 pt-16 sm:pt-20 flex flex-col gap-6">
+  <div class="flex flex-col gap-2">
+    <span class="text-sm font-extrabold uppercase tracking-wider text-brand">Quartiers</span>
+    <h2 class="text-3xl sm:text-4xl font-extrabold">Les quartiers qui bougent</h2>
+  </div>
+  {% set tiles = ['bg-brand text-white', 'bg-sun text-ink', 'bg-pop text-ink', 'bg-ink text-white', 'bg-brand-soft text-ink', 'bg-pop-soft text-ink'] %}
+  <div class="grid gap-4 grid-cols-2 lg:grid-cols-3">
+    {% for city, gov, count, min_price in areas %}
+      <a href="{{ url_for('main.search', q=city) }}" class="{{ tiles[loop.index0 % tiles|length] }} group relative overflow-hidden rounded-3xl p-5 sm:p-6 min-h-[150px] flex flex-col justify-between hover:-translate-y-0.5 transition-transform">
+        <span aria-hidden="true" class="absolute -right-8 -bottom-8 w-28 h-28 rounded-full bg-white/15 group-hover:scale-110 transition-transform"></span>
+        <span class="flex flex-col">
+          <span class="font-display text-2xl font-extrabold leading-tight">{{ city }}</span>
+          <span class="text-sm font-semibold opacity-80">{{ gov }}</span>
+        </span>
+        <span class="text-sm font-bold">{{ count }} annonce{{ 's' if count != 1 }} · dès {{ min_price|tnd }} TND</span>
+      </a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{# ================= ANNONCES RÉCENTES ================= #}
+<section class="max-w-6xl mx-auto px-4 sm:px-6 pt-16 sm:pt-20 flex flex-col gap-6">
+  <div class="flex flex-wrap items-end justify-between gap-3">
+    <div class="flex flex-col gap-2">
+      <span class="text-sm font-extrabold uppercase tracking-wider text-brand">Nouveautés</span>
+      <h2 class="text-3xl sm:text-4xl font-extrabold">Annonces récentes</h2>
+    </div>
+    <a href="{{ url_for('main.search') }}" class="min-h-[44px] px-4 rounded-full border-[1.5px] border-ink font-bold flex items-center gap-2 hover:bg-ink hover:text-white transition-colors">
+      Tout voir
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+    </a>
   </div>
   {% if recent %}
-    <div class="grid gap-6 grid-cols-[repeat(auto-fill,minmax(250px,1fr))]">
+    <div class="grid gap-x-6 gap-y-9 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
       {% for l in recent %}{{ listing_card(l) }}{% endfor %}
     </div>
   {% else %}
-    <p class="text-muted">Aucune annonce pour le moment. <a class="text-brand font-semibold" href="{{ url_for('listings.create') }}">Publie la première !</a></p>
+    <div class="p-8 rounded-3xl bg-slate-50 flex flex-col items-start gap-3">
+      <p class="font-bold text-lg">Aucune annonce pour le moment.</p>
+      <a class="min-h-[44px] px-5 rounded-full bg-brand text-white font-bold flex items-center" href="{{ url_for('listings.create') }}">Publie la première</a>
+    </div>
   {% endif %}
 </section>
 
-<section class="max-w-6xl mx-auto px-4 sm:px-6 pt-14 flex flex-col gap-6">
-  <h2 class="text-3xl font-extrabold tracking-tight">Pourquoi IKRILI ?</h2>
-  <div class="grid gap-6 grid-cols-[repeat(auto-fit,minmax(250px,1fr))]">
-    <div class="p-6 rounded-2xl border border-line flex flex-col gap-2.5">
-      <h3 class="text-lg font-bold">Annonces vérifiées</h3>
-      <p class="text-[15px] text-muted leading-relaxed">Les propriétaires vérifiés sont signalés par un badge, et chaque annonce peut être signalée en un clic.</p>
-    </div>
-    <div class="p-6 rounded-2xl border border-line flex flex-col gap-2.5">
-      <h3 class="text-lg font-bold">Contact direct</h3>
-      <p class="text-[15px] text-muted leading-relaxed">Écris au propriétaire et demande une visite depuis le site, sans intermédiaire.</p>
-    </div>
-    <div class="p-6 rounded-2xl border border-line flex flex-col gap-2.5">
-      <h3 class="text-lg font-bold">Des filtres qui comptent</h3>
-      <p class="text-[15px] text-muted leading-relaxed">Distance à la fac, meublé, colocation, nombre de chambres : tu ne vois que ce qui te correspond.</p>
-    </div>
+{# ================= CONFIANCE ================= #}
+<section class="max-w-6xl mx-auto px-4 sm:px-6 pt-16 sm:pt-20">
+  <div class="grid gap-4 md:grid-cols-3">
+    {% for icon_bg, icon, title, text in [
+      ('bg-okbg text-ok', '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/>', 'Annonces vérifiées', 'Badge pour les propriétaires vérifiés et signalement en un clic.'),
+      ('bg-brand-soft text-brand', '<path d="M4 5h16v11H8l-4 4z"/><path d="M8 10h8"/>', 'Contact direct', 'Pas d\'intermédiaire, pas de frais cachés : tu parles au propriétaire.'),
+      ('bg-sun-soft text-ink', '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>', 'Gain de temps', 'Filtres utiles et distance à pied de ta fac calculée pour toi.'),
+    ] %}
+      <div class="p-6 rounded-3xl border border-line flex gap-4">
+        <span class="shrink-0 w-12 h-12 rounded-2xl {{ icon_bg }} flex items-center justify-center">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ icon|safe }}</svg>
+        </span>
+        <span class="flex flex-col gap-1"><strong class="text-[17px]">{{ title }}</strong><span class="text-[15px] text-muted leading-relaxed">{{ text }}</span></span>
+      </div>
+    {% endfor %}
   </div>
 </section>
 
-<section class="max-w-6xl mx-auto px-4 sm:px-6 pt-14">
-  <div class="rounded-3xl bg-ink text-white p-8 sm:p-12 flex flex-wrap items-center justify-between gap-6">
-    <div class="max-w-xl flex flex-col gap-2.5">
-      <h2 class="text-3xl font-extrabold tracking-tight">Vous avez un logement à louer ?</h2>
-      <p class="text-[#C9D3E0] leading-relaxed">Publiez votre annonce en quelques minutes et recevez des demandes de locataires sérieux.</p>
+{# ================= APPEL AUX PROPRIÉTAIRES ================= #}
+<section class="max-w-6xl mx-auto px-4 sm:px-6 pt-16 sm:pt-20">
+  <div class="relative overflow-hidden rounded-[32px] bg-brand text-white p-8 sm:p-12">
+    <span aria-hidden="true" class="absolute -right-14 -top-14 sm:-right-16 sm:-top-16 w-28 h-28 sm:w-64 sm:h-64 rounded-full bg-pop"></span>
+    <span aria-hidden="true" class="hidden md:block absolute right-40 -bottom-20 w-40 h-40 rounded-full bg-sun"></span>
+    <div class="relative flex flex-wrap items-center justify-between gap-6">
+      <div class="max-w-xl flex flex-col gap-3">
+        <h2 class="text-3xl sm:text-[40px] font-extrabold leading-tight">Tu as un logement à louer ?</h2>
+        <p class="text-lg text-white/85 leading-relaxed">Publie ton annonce gratuitement en quelques minutes et reçois des demandes de locataires sérieux.</p>
+      </div>
+      <a href="{{ url_for('listings.create') }}" class="relative min-h-[56px] px-7 rounded-full bg-white text-ink font-extrabold flex items-center gap-2 shadow-xl hover:scale-[1.03] transition-transform">
+        Publier mon annonce
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </a>
     </div>
-    <a href="{{ url_for('listings.create') }}" class="px-6 py-4 rounded-xl bg-white text-ink font-bold">Publier une annonce</a>
   </div>
 </section>
 {% endblock %}

@@ -1,83 +1,189 @@
 {% extends "base.html" %}
+{% from "_macros.html" import photo_placeholder %}
 {% block title %}Mon espace – IKRILI{% endblock %}
 {% block content %}
-{% set status_labels = {'nouveau': 'Nouveau', 'lu': 'Lu', 'accepte': 'Visite acceptée', 'refuse': 'Refusé'} %}
-<div class="max-w-6xl mx-auto px-4 sm:px-6 py-8 flex flex-col gap-10">
-  <div class="flex flex-wrap items-center justify-between gap-3">
-    <h1 class="text-3xl font-extrabold tracking-tight">Bonjour {{ current_user.full_name.split()[0] }}</h1>
-    <a href="{{ url_for('listings.create') }}" class="px-5 py-3 rounded-xl bg-brand hover:bg-brand-dark text-white font-bold">Nouvelle annonce</a>
+{% set status_labels = {'nouveau': ('Nouveau', 'bg-pop text-ink'), 'lu': ('Lu', 'bg-slate-100 text-slate-700'),
+                        'accepte': ('Visite acceptée', 'bg-okbg text-ok'), 'refuse': ('Refusée', 'bg-slate-100 text-slate-700')} %}
+{% set btn = "min-h-[40px] px-3.5 rounded-full border-[1.5px] border-line font-semibold text-sm flex items-center gap-1.5 hover:border-ink" %}
+
+<div class="max-w-6xl mx-auto px-4 sm:px-6 py-8 flex flex-col gap-8">
+  <div class="flex flex-wrap items-end justify-between gap-4">
+    <div class="flex flex-col gap-1">
+      <span class="text-sm font-extrabold uppercase tracking-wider text-brand">Mon espace</span>
+      <h1 class="text-3xl sm:text-4xl font-extrabold">Salut {{ current_user.full_name.split()[0] }} !</h1>
+    </div>
+    <a href="{{ url_for('listings.create') }}" class="min-h-[48px] pl-4 pr-5 rounded-full bg-brand hover:bg-brand-dark text-white font-bold flex items-center gap-2">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+      Nouvelle annonce
+    </a>
   </div>
 
-  <section class="flex flex-col gap-4">
-    <h2 class="text-xl font-extrabold">Mes annonces ({{ my_listings|length }})</h2>
-    {% if my_listings %}
-      <div class="flex flex-col gap-3">
-        {% for l in my_listings %}
-          <div class="flex flex-wrap items-center justify-between gap-4 p-4 rounded-2xl border border-line">
-            <div class="flex flex-col gap-1 min-w-0">
-              <a href="{{ url_for('main.listing_detail', listing_id=l.id) }}" class="font-bold hover:text-brand">{{ l.title }}</a>
-              <span class="text-sm text-muted">{{ l.city }} · {{ l.price_tnd|tnd }} TND · {{ l.requests|length }} demande{{ 's' if l.requests|length != 1 }} · {{ l.favorited_by|length }} favori{{ 's' if l.favorited_by|length != 1 }}</span>
-            </div>
-            <div class="flex flex-wrap gap-2 items-center">
+  {# --- Chiffres clés --- #}
+  <div class="grid gap-3 grid-cols-2 lg:grid-cols-4">
+    {% for value, label, style in [
+      (stats.online, 'Annonce' ~ ('s' if stats.online != 1) ~ ' en ligne', 'bg-brand text-white'),
+      (stats.new, 'Nouvelle' ~ ('s' if stats.new != 1) ~ ' demande' ~ ('s' if stats.new != 1), 'bg-pop text-ink'),
+      (stats.accepted, 'Visite' ~ ('s' if stats.accepted != 1) ~ ' acceptée' ~ ('s' if stats.accepted != 1), 'bg-sun text-ink'),
+      (stats.favs, 'Ajout' ~ ('s' if stats.favs != 1) ~ ' en favoris', 'bg-brand-soft text-ink'),
+    ] %}
+      <div class="{{ style }} rounded-3xl p-5 flex flex-col gap-1 relative overflow-hidden">
+        <span aria-hidden="true" class="absolute -right-6 -bottom-6 w-20 h-20 rounded-full bg-white/15"></span>
+        <span class="font-display text-4xl font-extrabold leading-none">{{ value }}</span>
+        <span class="text-sm font-semibold">{{ label }}</span>
+      </div>
+    {% endfor %}
+  </div>
+
+  {# --- Onglets --- #}
+  <div class="flex flex-col gap-6">
+    <div role="tablist" aria-label="Sections" class="flex gap-1 p-1 rounded-2xl bg-slate-100 self-start max-w-full overflow-x-auto no-scrollbar">
+      {% for key, label, count in [('annonces', 'Mes annonces', my_listings|length), ('demandes', 'Demandes reçues', stats.new), ('envoyees', 'Mes demandes', sent|length)] %}
+        <button type="button" role="tab" id="tab-{{ key }}" aria-controls="panel-{{ key }}" aria-selected="{{ 'true' if tab == key else 'false' }}" data-tab="{{ key }}"
+                class="shrink-0 min-h-[44px] px-4 rounded-xl text-sm font-bold flex items-center gap-2 text-muted aria-selected:bg-white aria-selected:text-ink aria-selected:shadow-sm">
+          {{ label }}
+          {% if count %}<span class="min-w-[22px] h-[22px] px-1.5 rounded-full text-xs flex items-center justify-center {{ 'bg-pop text-ink' if key == 'demandes' else 'bg-slate-200 text-ink' }}">{{ count }}</span>{% endif %}
+        </button>
+      {% endfor %}
+    </div>
+
+    {# Mes annonces #}
+    <section role="tabpanel" id="panel-annonces" aria-labelledby="tab-annonces" {% if tab != 'annonces' %}hidden{% endif %} class="flex flex-col gap-3">
+      {% for l in my_listings %}
+        <article class="p-3 sm:p-4 rounded-3xl border border-line flex flex-col sm:flex-row gap-4">
+          <a href="{{ url_for('main.listing_detail', listing_id=l.id) }}" class="shrink-0 sm:w-44">
+            {% if l.cover %}
+              <img src="{{ url_for('static', filename='uploads/' ~ l.cover.filename) }}" alt="" class="w-full h-40 sm:h-28 object-cover rounded-2xl {{ 'grayscale opacity-60' if not l.is_active }}">
+            {% else %}{{ photo_placeholder('Aucune photo', 'h-40 sm:h-28') }}{% endif %}
+          </a>
+          <div class="flex-1 min-w-0 flex flex-col gap-2">
+            <div class="flex flex-wrap items-start justify-between gap-2">
+              <a href="{{ url_for('main.listing_detail', listing_id=l.id) }}" class="font-display text-lg font-bold leading-tight hover:text-brand">{{ l.title }}</a>
               <span class="px-2.5 py-1 rounded-full text-xs font-bold {{ 'bg-okbg text-ok' if l.is_active else 'bg-slate-100 text-slate-700' }}">{{ 'En ligne' if l.is_active else 'Masquée' }}</span>
-              <a href="{{ url_for('listings.edit', listing_id=l.id) }}" class="px-3 py-2 rounded-lg border border-line font-semibold text-sm">Modifier</a>
+            </div>
+            <span class="text-sm text-muted">{{ l.city }}, {{ l.governorate }} · <strong class="text-ink">{{ l.price_tnd|tnd }} TND</strong> / mois</span>
+            <div class="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted">
+              <span>{{ l.photos|length }} photo{{ 's' if l.photos|length != 1 }}</span>
+              <span>{{ l.requests|length }} demande{{ 's' if l.requests|length != 1 }}</span>
+              <span>{{ l.favorited_by|length }} favori{{ 's' if l.favorited_by|length != 1 }}</span>
+            </div>
+            {% if not l.photos %}<span class="text-sm font-semibold text-warn">Ajoute des photos : les annonces avec photos reçoivent bien plus de demandes.</span>{% endif %}
+            <div class="flex flex-wrap gap-2 pt-1">
+              <a href="{{ url_for('listings.edit', listing_id=l.id) }}" class="{{ btn }}">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>Modifier
+              </a>
               <form method="post" action="{{ url_for('listings.toggle_active', listing_id=l.id) }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button class="px-3 py-2 rounded-lg border border-line font-semibold text-sm">{{ 'Marquer comme louée' if l.is_active else 'Remettre en ligne' }}</button>
+                <button class="{{ btn }}">{{ 'Marquer comme louée' if l.is_active else 'Remettre en ligne' }}</button>
               </form>
               <form method="post" action="{{ url_for('listings.delete', listing_id=l.id) }}" onsubmit="return confirm('Supprimer définitivement cette annonce ?');">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button class="px-3 py-2 rounded-lg border border-red-200 text-red-700 font-semibold text-sm">Supprimer</button>
+                <button class="{{ btn }} text-red-700 hover:border-red-700">Supprimer</button>
               </form>
             </div>
           </div>
-        {% endfor %}
-      </div>
-    {% else %}
-      <p class="text-muted">Tu n'as pas encore publié d'annonce.</p>
-    {% endif %}
-  </section>
+        </article>
+      {% else %}
+        <div class="p-8 rounded-3xl bg-brand-soft flex flex-col items-start gap-3">
+          <p class="font-display text-xl font-bold">Tu n'as pas encore publié d'annonce.</p>
+          <p class="text-muted">C'est gratuit et ça prend 5 minutes.</p>
+          <a href="{{ url_for('listings.create') }}" class="min-h-[48px] px-5 rounded-full bg-brand text-white font-bold flex items-center">Publier ma première annonce</a>
+        </div>
+      {% endfor %}
+    </section>
 
-  <section class="flex flex-col gap-4">
-    <h2 class="text-xl font-extrabold">Demandes reçues</h2>
-    {% if received %}
+    {# Demandes reçues #}
+    <section role="tabpanel" id="panel-demandes" aria-labelledby="tab-demandes" {% if tab != 'demandes' %}hidden{% endif %} class="flex flex-col gap-3">
       {% for r in received %}
-        <div class="p-4 rounded-2xl border border-line flex flex-col gap-2">
-          <div class="flex flex-wrap justify-between gap-2 text-sm">
-            <span><strong>{{ r.sender.full_name }}</strong> · {{ 'Demande de visite' if r.kind == 'visite' else 'Message' }} pour <a class="text-brand font-semibold" href="{{ url_for('main.listing_detail', listing_id=r.listing.id) }}">{{ r.listing.title }}</a></span>
-            <span class="text-muted">{{ r.created_at.strftime('%d/%m/%Y %H:%M') }} · {{ status_labels.get(r.status, r.status) }}</span>
+        {% set st = status_labels.get(r.status, (r.status, 'bg-slate-100')) %}
+        <article class="p-4 sm:p-5 rounded-3xl border {{ 'border-pop bg-pop-soft/50' if r.status == 'nouveau' else 'border-line' }} flex flex-col gap-3">
+          <div class="flex flex-wrap items-center gap-3">
+            <span class="w-11 h-11 rounded-full bg-brand-soft text-brand-dark font-extrabold flex items-center justify-center shrink-0">{{ r.sender.initials }}</span>
+            <div class="flex-1 min-w-0 flex flex-col">
+              <span class="font-bold">{{ r.sender.full_name }}</span>
+              <span class="text-sm text-muted truncate">{{ 'Demande de visite' if r.kind == 'visite' else 'Message' }} · <a class="text-brand font-semibold" href="{{ url_for('main.listing_detail', listing_id=r.listing.id) }}">{{ r.listing.title }}</a></span>
+            </div>
+            <span class="flex flex-col items-end gap-1">
+              <span class="px-2.5 py-1 rounded-full text-xs font-bold {{ st[1] }}">{{ st[0] }}</span>
+              <span class="text-xs text-muted">{{ r.created_at.strftime('%d/%m/%Y · %H:%M') }}</span>
+            </span>
           </div>
-          <p class="text-[15px] whitespace-pre-line">{{ r.body }}</p>
-          <p class="text-sm text-muted">Contact : {{ r.sender.email }}{% if r.sender.phone %} · {{ r.sender.phone }}{% endif %}</p>
-          {% if r.kind == 'visite' and r.status in ('nouveau', 'lu') %}
-          <div class="flex gap-2">
-            {% for action, label in [('accepte', 'Accepter la visite'), ('refuse', 'Refuser')] %}
-              <form method="post" action="{{ url_for('listings.answer_request', request_id=r.id, action=action) }}">
+          <p class="text-[15px] whitespace-pre-line pl-0 sm:pl-14">{{ r.body }}</p>
+          <div class="flex flex-wrap gap-2 sm:pl-14">
+            {% if r.kind == 'visite' and r.status in ('nouveau', 'lu') %}
+              <form method="post" action="{{ url_for('listings.answer_request', request_id=r.id, action='accepte') }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button class="px-3 py-2 rounded-lg font-semibold text-sm {{ 'bg-brand text-white' if action == 'accepte' else 'border border-line' }}">{{ label }}</button>
+                <button class="min-h-[40px] px-4 rounded-full bg-brand text-white font-bold text-sm">Accepter la visite</button>
               </form>
-            {% endfor %}
+              <form method="post" action="{{ url_for('listings.answer_request', request_id=r.id, action='refuse') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="{{ btn }}">Refuser</button>
+              </form>
+            {% elif r.status == 'nouveau' %}
+              <form method="post" action="{{ url_for('listings.answer_request', request_id=r.id, action='lu') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="{{ btn }}">Marquer comme lu</button>
+              </form>
+            {% endif %}
+            <a href="mailto:{{ r.sender.email }}?subject={{ ('IKRILI – ' ~ r.listing.title)|urlencode }}" class="{{ btn }}">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>Répondre par e-mail
+            </a>
+            {% if r.sender.phone %}
+              <a href="tel:{{ r.sender.phone|replace(' ', '') }}" class="{{ btn }}">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg>{{ r.sender.phone }}
+              </a>
+            {% endif %}
           </div>
-          {% endif %}
-        </div>
+        </article>
+      {% else %}
+        <div class="p-8 rounded-3xl bg-slate-50 text-muted">Aucune demande pour l'instant. Elles apparaîtront ici dès qu'un locataire te contactera.</div>
       {% endfor %}
-    {% else %}
-      <p class="text-muted">Aucune demande pour l'instant.</p>
-    {% endif %}
-  </section>
+    </section>
 
-  <section class="flex flex-col gap-4">
-    <h2 class="text-xl font-extrabold">Mes demandes envoyées</h2>
-    {% if sent %}
+    {# Mes demandes envoyées #}
+    <section role="tabpanel" id="panel-envoyees" aria-labelledby="tab-envoyees" {% if tab != 'envoyees' %}hidden{% endif %} class="flex flex-col gap-3">
       {% for r in sent %}
-        <div class="p-4 rounded-2xl border border-line flex flex-wrap justify-between gap-2 text-sm">
-          <span>{{ 'Visite' if r.kind == 'visite' else 'Message' }} · <a class="text-brand font-semibold" href="{{ url_for('main.listing_detail', listing_id=r.listing.id) }}">{{ r.listing.title }}</a></span>
-          <span class="text-muted">{{ r.created_at.strftime('%d/%m/%Y') }} · {{ status_labels.get(r.status, r.status) }}</span>
+        {% set st = status_labels.get(r.status, (r.status, 'bg-slate-100')) %}
+        <a href="{{ url_for('main.listing_detail', listing_id=r.listing.id) }}" class="p-4 rounded-3xl border border-line flex items-center gap-4 hover:border-ink">
+          {% if r.listing.cover %}<img src="{{ url_for('static', filename='uploads/' ~ r.listing.cover.filename) }}" alt="" class="w-16 h-16 rounded-2xl object-cover shrink-0">
+          {% else %}<span class="w-16 h-16 rounded-2xl bg-brand-photo shrink-0"></span>{% endif %}
+          <span class="flex-1 min-w-0 flex flex-col">
+            <span class="font-bold truncate">{{ r.listing.title }}</span>
+            <span class="text-sm text-muted">{{ 'Visite' if r.kind == 'visite' else 'Message' }} envoyé le {{ r.created_at.strftime('%d/%m/%Y') }}</span>
+          </span>
+          <span class="px-2.5 py-1 rounded-full text-xs font-bold {{ st[1] if r.status != 'nouveau' else 'bg-slate-100 text-slate-700' }}">{{ 'En attente' if r.status in ('nouveau', 'lu') else st[0] }}</span>
+        </a>
+      {% else %}
+        <div class="p-8 rounded-3xl bg-slate-50 flex flex-col items-start gap-3">
+          <p class="text-muted">Tu n'as encore contacté aucun propriétaire.</p>
+          <a href="{{ url_for('main.search') }}" class="min-h-[44px] px-5 rounded-full bg-ink text-white font-bold flex items-center">Chercher un logement</a>
         </div>
       {% endfor %}
-    {% else %}
-      <p class="text-muted">Tu n'as encore contacté aucun propriétaire.</p>
-    {% endif %}
-  </section>
+    </section>
+  </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  (function () {
+    var tabs = document.querySelectorAll('[data-tab]');
+    function select(key) {
+      tabs.forEach(function (t) {
+        var on = t.dataset.tab === key;
+        t.setAttribute('aria-selected', on ? 'true' : 'false');
+        t.tabIndex = on ? 0 : -1;
+        document.getElementById('panel-' + t.dataset.tab).hidden = !on;
+      });
+      history.replaceState(null, '', '?onglet=' + key);
+    }
+    tabs.forEach(function (t, i) {
+      t.addEventListener('click', function () { select(t.dataset.tab); });
+      t.addEventListener('keydown', function (e) {
+        if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+        var n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
+        n.focus(); select(n.dataset.tab);
+      });
+    });
+  })();
+</script>
 {% endblock %}

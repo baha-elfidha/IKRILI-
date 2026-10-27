@@ -1,18 +1,19 @@
 {% extends "base.html" %}
+{% set page_width = "max-w-none" %}
 {% from "_macros.html" import listing_card %}
 {% block title %}Logements à louer{% if university %} près de {{ university.name }}{% endif %} – IKRILI{% endblock %}
 {% block head %}<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
-  .price-pin { background: #fff; color: #0F1B2D; font-weight: 800; font-size: 13px; padding: 5px 10px; border-radius: 999px;
-               box-shadow: 0 2px 8px rgba(15,27,45,.25); white-space: nowrap; border: 1.5px solid #fff; transition: transform .12s; }
-  .price-pin.is-active { background: #1F5FA8; color: #fff; transform: scale(1.12); }
+  .price-pin { background: #fff; color: #0E1530; font-weight: 800; font-size: 13px; padding: 5px 10px; border-radius: 999px;
+               box-shadow: 0 2px 8px rgba(14,21,48,.25); white-space: nowrap; border: 1.5px solid #fff; transition: transform .12s; }
+  .price-pin.is-active { background: #2D4BF0; color: #fff; transform: scale(1.12); }
   .leaflet-div-icon { background: transparent; border: none; }
-  .uni-pin { background: #0F1B2D; color: #fff; font-weight: 700; font-size: 12px; padding: 6px 10px; border-radius: 10px; white-space: nowrap; }
+  .uni-pin { background: #0E1530; color: #fff; font-weight: 700; font-size: 12px; padding: 6px 10px; border-radius: 10px; white-space: nowrap; }
   .leaflet-popup-content { margin: 0; width: 230px !important; }
   .leaflet-popup-content-wrapper { padding: 0; overflow: hidden; border-radius: 14px; }
 </style>{% endblock %}
 {% block content %}
-{% set input = "w-full px-3 py-2.5 rounded-lg border-[1.5px] border-[#D5DCE5] bg-white text-[15px]" %}
+{% set input = "w-full px-3 py-2.5 rounded-lg border-[1.5px] border-[#D9DDEA] bg-white text-[15px]" %}
 {% set legend = "text-[13px] font-bold uppercase tracking-wider text-muted" %}
 
 {# --- Barre d'outils --- #}
@@ -24,14 +25,14 @@
       </h1>
       <div class="flex items-center gap-2">
         <label class="hidden sm:flex items-center gap-2 text-sm text-muted">Trier
-          <select name="tri" form="filters" onchange="this.form.submit()" class="px-2.5 py-2 rounded-lg border-[1.5px] border-[#D5DCE5] bg-white text-sm text-ink">
+          <select name="tri" form="filters" onchange="this.form.submit()" class="px-2.5 py-2 rounded-lg border-[1.5px] border-[#D9DDEA] bg-white text-sm text-ink">
             <option value="recent" {% if args.get('tri', 'recent') == 'recent' %}selected{% endif %}>Plus récentes</option>
             <option value="prix" {% if args.get('tri') == 'prix' %}selected{% endif %}>Prix croissant</option>
             {% if university %}<option value="proche" {% if args.get('tri') == 'proche' %}selected{% endif %}>Plus proches</option>{% endif %}
           </select>
         </label>
         <button type="button" data-open-filters aria-controls="filters-panel" aria-expanded="false"
-                class="min-h-[44px] px-4 rounded-full border-[1.5px] border-[#D5DCE5] bg-white font-semibold text-sm flex items-center gap-2 hover:border-ink">
+                class="min-h-[44px] px-4 rounded-full border-[1.5px] border-[#D9DDEA] bg-white font-semibold text-sm flex items-center gap-2 hover:border-ink">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
           Filtres
           {% if active_filters %}<span class="min-w-[22px] h-[22px] px-1.5 rounded-full bg-brand text-white text-xs font-bold flex items-center justify-center">{{ active_filters }}</span>{% endif %}
@@ -42,7 +43,7 @@
       {% for c in chips %}
         <a href="{{ c.url }}" {% if c.active %}aria-current="true"{% endif %}
            class="shrink-0 min-h-[40px] px-4 rounded-full text-sm font-semibold flex items-center gap-1.5 border-[1.5px]
-                  {% if c.active %}bg-brand border-brand text-white{% else %}bg-white border-[#D5DCE5] text-ink hover:border-ink{% endif %}">
+                  {% if c.active %}bg-brand border-brand text-white{% else %}bg-white border-[#D9DDEA] text-ink hover:border-ink{% endif %}">
           {% if c.active %}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>{% endif %}
           {{ c.label }}
         </a>
@@ -74,7 +75,7 @@
       {% for p in range(1, pages + 1) %}
         {% set a = args.to_dict() %}{% set _ = a.update({'page': p}) %}
         <a href="{{ url_for('main.search', **a) }}" {% if p == page %}aria-current="page"{% endif %}
-           class="w-11 h-11 rounded-lg flex items-center justify-center font-bold {% if p == page %}bg-ink text-white{% else %}border border-[#D5DCE5]{% endif %}">{{ p }}</a>
+           class="w-11 h-11 rounded-lg flex items-center justify-center font-bold {% if p == page %}bg-ink text-white{% else %}border border-[#D9DDEA]{% endif %}">{{ p }}</a>
       {% endfor %}
     </nav>
     {% endif %}
@@ -82,7 +83,7 @@
 
   <section id="map-view" aria-label="Carte des annonces"
            class="hidden lg:block lg:flex-1 lg:sticky lg:top-0 lg:h-screen lg:self-start
-                  fixed inset-x-0 bottom-0 top-16 z-[900] lg:z-auto bg-[#E9EEF3]">
+                  fixed inset-x-0 bottom-0 top-16 z-[900] lg:z-auto bg-[#EEF0F6]">
     <div id="search-map" class="w-full h-full"></div>
     {% if not map_points %}
       <div class="absolute top-4 left-1/2 -translate-x-1/2 z-[500] px-4 py-2 rounded-full bg-white shadow text-sm font-semibold">Aucune annonce à afficher sur la carte</div>
@@ -137,7 +138,7 @@
           {% for value, label in [('', 'Tous'), ('etudiants', 'Étudiant·e'), ('familles', 'Famille')] %}
             <label class="relative">
               <input type="radio" name="pour" value="{{ value }}" {% if args.get('pour', '') == value %}checked{% endif %} class="peer sr-only">
-              <span class="min-h-[44px] flex items-center justify-center rounded-lg border-[1.5px] border-[#D5DCE5] text-sm font-semibold cursor-pointer
+              <span class="min-h-[44px] flex items-center justify-center rounded-lg border-[1.5px] border-[#D9DDEA] text-sm font-semibold cursor-pointer
                            peer-checked:border-brand peer-checked:bg-brand-soft peer-focus-visible:ring-2 peer-focus-visible:ring-brand">{{ label }}</span>
             </label>
           {% endfor %}
@@ -173,11 +174,11 @@
       <fieldset class="flex flex-col gap-1">
         <legend class="{{ legend }} mb-2">Options</legend>
         {% set opt = "flex items-center gap-3 min-h-[40px]" %}
-        <label class="{{ opt }}"><input type="checkbox" name="meuble" value="1" {% if args.get('meuble') %}checked{% endif %} class="w-5 h-5 accent-[#1F5FA8]"> Meublé</label>
-        <label class="{{ opt }}"><input type="checkbox" name="coloc" value="1" {% if args.get('coloc') %}checked{% endif %} class="w-5 h-5 accent-[#1F5FA8]"> Colocation</label>
-        <label class="{{ opt }}"><input type="checkbox" name="filles" value="1" {% if args.get('filles') %}checked{% endif %} class="w-5 h-5 accent-[#1F5FA8]"> Colocation filles uniquement</label>
+        <label class="{{ opt }}"><input type="checkbox" name="meuble" value="1" {% if args.get('meuble') %}checked{% endif %} class="w-5 h-5 accent-[#2D4BF0]"> Meublé</label>
+        <label class="{{ opt }}"><input type="checkbox" name="coloc" value="1" {% if args.get('coloc') %}checked{% endif %} class="w-5 h-5 accent-[#2D4BF0]"> Colocation</label>
+        <label class="{{ opt }}"><input type="checkbox" name="filles" value="1" {% if args.get('filles') %}checked{% endif %} class="w-5 h-5 accent-[#2D4BF0]"> Colocation filles uniquement</label>
         {% for field, label in amenities %}
-          <label class="{{ opt }}"><input type="checkbox" name="{{ field }}" value="1" {% if args.get(field) %}checked{% endif %} class="w-5 h-5 accent-[#1F5FA8]"> {{ label }}</label>
+          <label class="{{ opt }}"><input type="checkbox" name="{{ field }}" value="1" {% if args.get(field) %}checked{% endif %} class="w-5 h-5 accent-[#2D4BF0]"> {{ label }}</label>
         {% endfor %}
       </fieldset>
 
@@ -192,7 +193,7 @@
     </div>
 
     <div class="px-5 py-4 border-t border-line flex gap-3 shrink-0">
-      <a href="{{ url_for('main.search') }}" class="min-h-[48px] px-4 rounded-xl border-[1.5px] border-[#D5DCE5] font-semibold flex items-center">Effacer</a>
+      <a href="{{ url_for('main.search') }}" class="min-h-[48px] px-4 rounded-xl border-[1.5px] border-[#D9DDEA] font-semibold flex items-center">Effacer</a>
       <button type="submit" class="flex-1 min-h-[48px] rounded-xl bg-brand hover:bg-brand-dark text-white font-bold">Afficher les résultats</button>
     </div>
   </form>
@@ -238,11 +239,11 @@
     var icon = L.divIcon({ className: '', html: '<div class="price-pin" data-pin="' + p.id + '">' + fmt(p.price) + '</div>', iconSize: null });
     var m = L.marker([p.lat, p.lng], { icon: icon, riseOnHover: true, title: p.title }).addTo(map);
     var img = p.photo ? '<img src="' + p.photo + '" alt="" style="width:100%;height:130px;object-fit:cover;display:block">'
-                      : '<div style="height:80px;background:#DCE6F2"></div>';
-    m.bindPopup('<a href="' + p.url + '" style="display:block;color:#0F1B2D;text-decoration:none">' + img +
+                      : '<div style="height:80px;background:#DDE3FF"></div>';
+    m.bindPopup('<a href="' + p.url + '" style="display:block;color:#0E1530;text-decoration:none">' + img +
       '<div style="padding:10px 12px 12px;font-family:inherit"><div style="font-weight:700;font-size:14px;line-height:1.3">' + esc(p.title) + '</div>' +
-      '<div style="font-size:12px;color:#4A5568;margin-top:2px">' + esc(p.place) + '</div>' +
-      '<div style="font-weight:800;font-size:15px;margin-top:6px">' + fmt(p.price) + ' <span style="font-weight:500;font-size:12px;color:#4A5568">TND / mois</span></div></div></a>',
+      '<div style="font-size:12px;color:#4B5470;margin-top:2px">' + esc(p.place) + '</div>' +
+      '<div style="font-weight:800;font-size:15px;margin-top:6px">' + fmt(p.price) + ' <span style="font-weight:500;font-size:12px;color:#4B5470">TND / mois</span></div></div></a>',
       { closeButton: false, offset: [0, -4] });
     markers[p.id] = m;
     bounds.push([p.lat, p.lng]);
@@ -251,7 +252,7 @@
   if (uni) {
     L.marker([uni.lat, uni.lng], { icon: L.divIcon({ className: '', html: '<div class="uni-pin">' + esc(uni.name) + '</div>', iconSize: null }), zIndexOffset: 1000 }).addTo(map);
     // Rayon approximatif correspondant aux minutes de marche (≈ 70 m par minute)
-    L.circle([uni.lat, uni.lng], { radius: uni.minutes * 70, color: '#1F5FA8', weight: 1.5, dashArray: '6 6', fillOpacity: 0.06 }).addTo(map);
+    L.circle([uni.lat, uni.lng], { radius: uni.minutes * 70, color: '#2D4BF0', weight: 1.5, dashArray: '6 6', fillOpacity: 0.06 }).addTo(map);
     bounds.push([uni.lat, uni.lng]);
   }
   function fit() {
