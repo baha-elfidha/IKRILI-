@@ -20,6 +20,8 @@ class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY", "change-moi-en-production")
     SQLALCHEMY_DATABASE_URI = _database_url()
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+        # Vérifie la connexion avant usage (utile après une mise en veille du serveur)
+    SQLALCHEMY_ENGINE_OPTIONS = {"pool_pre_ping": True, "pool_recycle": 280}
     UPLOAD_FOLDER = os.environ.get("UPLOAD_FOLDER", os.path.join(BASE_DIR, "app", "static", "uploads"))
     MAX_CONTENT_LENGTH = 15 * 1024 * 1024  # 15 Mo par envoi
     ALLOWED_IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}

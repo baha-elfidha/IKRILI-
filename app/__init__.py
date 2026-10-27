@@ -40,5 +40,8 @@ def create_app(config_class=Config):
 
     with app.app_context():
         db.create_all()
+        # Ferme les connexions ouvertes au démarrage : chaque worker gunicorn
+        # doit ouvrir les siennes (sinon erreur SSL "bad record mac")
+        db.engine.dispose()
 
     return app
