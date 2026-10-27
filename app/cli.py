@@ -1,5 +1,5 @@
+import os
 from datetime import date
-
 import click
 
 from app import db
@@ -57,6 +57,14 @@ def register(app):
                                                     "« flask seed ». Supprime-le avant le lancement public."),
                                        **d))
             click.echo("Annonces de démonstration ajoutées (compte demo@ikrili.tn / demo12345).")
+
+        # Variable d'environnement ADMIN_EMAIL : ce compte devient administrateur
+        admin_email = os.environ.get("ADMIN_EMAIL", "").strip().lower()
+        if admin_email:
+            admin = User.query.filter_by(email=admin_email).first()
+            if admin and admin.role != "admin":
+                admin.role = "admin"
+                click.echo(f"{admin_email} est maintenant administrateur.")
         db.session.commit()
 
     @app.cli.command("make-admin")
