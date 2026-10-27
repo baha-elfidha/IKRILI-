@@ -1,92 +1,72 @@
 {% extends "base.html" %}
 {% from "_macros.html" import listing_card %}
 {% block title %}Logements à louer{% if university %} près de {{ university.name }}{% endif %} – IKRILI{% endblock %}
+{% block head %}<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  .price-pin { background: #fff; color: #0F1B2D; font-weight: 800; font-size: 13px; padding: 5px 10px; border-radius: 999px;
+               box-shadow: 0 2px 8px rgba(15,27,45,.25); white-space: nowrap; border: 1.5px solid #fff; transition: transform .12s; }
+  .price-pin.is-active { background: #1F5FA8; color: #fff; transform: scale(1.12); }
+  .leaflet-div-icon { background: transparent; border: none; }
+  .uni-pin { background: #0F1B2D; color: #fff; font-weight: 700; font-size: 12px; padding: 6px 10px; border-radius: 10px; white-space: nowrap; }
+  .leaflet-popup-content { margin: 0; width: 230px !important; }
+  .leaflet-popup-content-wrapper { padding: 0; overflow: hidden; border-radius: 14px; }
+</style>{% endblock %}
 {% block content %}
 {% set input = "w-full px-3 py-2.5 rounded-lg border-[1.5px] border-[#D5DCE5] bg-white text-[15px]" %}
 {% set legend = "text-[13px] font-bold uppercase tracking-wider text-muted" %}
-<div class="max-w-6xl mx-auto px-4 sm:px-6 py-6 flex flex-wrap gap-8 items-start">
 
-  <form method="get" action="{{ url_for('main.search') }}" aria-label="Filtres" class="flex-[1_1_240px] max-w-[290px] flex flex-col gap-6">
-    <label class="flex flex-col gap-2">
-      <span class="{{ legend }}">Ville ou quartier</span>
-      <input name="q" value="{{ args.get('q','') }}" class="{{ input }}" placeholder="Ex. Ennasr">
-    </label>
-    <label class="flex flex-col gap-2">
-      <span class="{{ legend }}">Gouvernorat</span>
-      <select name="gouvernorat" class="{{ input }}">
-        <option value="">Tous</option>
-        {% for g in governorates %}<option value="{{ g }}" {% if args.get('gouvernorat') == g %}selected{% endif %}>{{ g }}</option>{% endfor %}
-      </select>
-    </label>
-    <label class="flex flex-col gap-2">
-      <span class="{{ legend }}">Type</span>
-      <select name="type" class="{{ input }}">
-        <option value="">Tous</option>
-        {% for v, l in property_types %}<option value="{{ v }}" {% if args.get('type') == v %}selected{% endif %}>{{ l }}</option>{% endfor %}
-      </select>
-    </label>
-    <fieldset class="flex flex-col gap-2">
-      <legend class="{{ legend }} mb-2">Je cherche pour</legend>
-      <label class="flex items-center gap-2.5"><input type="radio" name="pour" value="" {% if not args.get('pour') %}checked{% endif %} class="w-[18px] h-[18px]"> Tout le monde</label>
-      <label class="flex items-center gap-2.5"><input type="radio" name="pour" value="etudiants" {% if args.get('pour') == 'etudiants' %}checked{% endif %} class="w-[18px] h-[18px]"> Étudiant·e</label>
-      <label class="flex items-center gap-2.5"><input type="radio" name="pour" value="familles" {% if args.get('pour') == 'familles' %}checked{% endif %} class="w-[18px] h-[18px]"> Famille</label>
-    </fieldset>
-    <div class="flex flex-col gap-2">
-      <span class="{{ legend }}">Budget (TND / mois)</span>
-      <div class="flex gap-2">
-        <label class="flex-1 flex flex-col gap-1 text-xs text-muted">Min<input type="number" min="0" name="min" value="{{ args.get('min','') }}" class="{{ input }}"></label>
-        <label class="flex-1 flex flex-col gap-1 text-xs text-muted">Max<input type="number" min="0" name="max" value="{{ args.get('max','') }}" class="{{ input }}"></label>
+{# --- Barre d'outils --- #}
+<div class="border-b border-line">
+  <div class="px-4 sm:px-6 pt-4 pb-3 flex flex-col gap-3">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <h1 class="text-xl sm:text-2xl font-extrabold">
+        {{ total }} logement{{ 's' if total != 1 }}{% if university %} près de {{ university.name }}{% elif args.get('q') %} · « {{ args.get('q') }} »{% endif %}
+      </h1>
+      <div class="flex items-center gap-2">
+        <label class="hidden sm:flex items-center gap-2 text-sm text-muted">Trier
+          <select name="tri" form="filters" onchange="this.form.submit()" class="px-2.5 py-2 rounded-lg border-[1.5px] border-[#D5DCE5] bg-white text-sm text-ink">
+            <option value="recent" {% if args.get('tri', 'recent') == 'recent' %}selected{% endif %}>Plus récentes</option>
+            <option value="prix" {% if args.get('tri') == 'prix' %}selected{% endif %}>Prix croissant</option>
+            {% if university %}<option value="proche" {% if args.get('tri') == 'proche' %}selected{% endif %}>Plus proches</option>{% endif %}
+          </select>
+        </label>
+        <button type="button" data-open-filters aria-controls="filters-panel" aria-expanded="false"
+                class="min-h-[44px] px-4 rounded-full border-[1.5px] border-[#D5DCE5] bg-white font-semibold text-sm flex items-center gap-2 hover:border-ink">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+          Filtres
+          {% if active_filters %}<span class="min-w-[22px] h-[22px] px-1.5 rounded-full bg-brand text-white text-xs font-bold flex items-center justify-center">{{ active_filters }}</span>{% endif %}
+        </button>
       </div>
     </div>
-    <label class="flex flex-col gap-2">
-      <span class="{{ legend }}">Chambres (minimum)</span>
-      <input type="number" min="1" name="chambres" value="{{ args.get('chambres','') }}" class="{{ input }}">
-    </label>
-    <div class="flex flex-col gap-2">
-      <span class="{{ legend }}">Distance à l'université</span>
-      <label class="flex flex-col gap-1 text-sm text-slate-700">Université
-        <select name="universite" class="{{ input }}">
-          <option value="">Aucune</option>
-          {% for u in universities %}<option value="{{ u.id }}" {% if university and university.id == u.id %}selected{% endif %}>{{ u.name }} – {{ u.zone }}</option>{% endfor %}
-        </select>
-      </label>
-      <label class="flex flex-col gap-1 text-sm text-slate-700">À moins de (minutes à pied)
-        <input type="number" min="5" max="90" name="minutes" value="{{ args.get('minutes', 20) }}" class="{{ input }}">
-      </label>
-    </div>
-    <fieldset class="flex flex-col gap-2">
-      <legend class="{{ legend }} mb-2">Options</legend>
-      <label class="flex items-center gap-2.5"><input type="checkbox" name="meuble" value="1" {% if args.get('meuble') %}checked{% endif %} class="w-[18px] h-[18px]"> Meublé</label>
-      <label class="flex items-center gap-2.5"><input type="checkbox" name="coloc" value="1" {% if args.get('coloc') %}checked{% endif %} class="w-[18px] h-[18px]"> Colocation</label>
-      <label class="flex items-center gap-2.5"><input type="checkbox" name="filles" value="1" {% if args.get('filles') %}checked{% endif %} class="w-[18px] h-[18px]"> Colocation filles uniquement</label>
-      {% for field, label in amenities %}
-        <label class="flex items-center gap-2.5"><input type="checkbox" name="{{ field }}" value="1" {% if args.get(field) %}checked{% endif %} class="w-[18px] h-[18px]"> {{ label }}</label>
+    <div class="flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0" aria-label="Filtres rapides">
+      {% for c in chips %}
+        <a href="{{ c.url }}" {% if c.active %}aria-current="true"{% endif %}
+           class="shrink-0 min-h-[40px] px-4 rounded-full text-sm font-semibold flex items-center gap-1.5 border-[1.5px]
+                  {% if c.active %}bg-brand border-brand text-white{% else %}bg-white border-[#D5DCE5] text-ink hover:border-ink{% endif %}">
+          {% if c.active %}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>{% endif %}
+          {{ c.label }}
+        </a>
       {% endfor %}
-    </fieldset>
-    <label class="flex flex-col gap-2">
-      <span class="{{ legend }}">Trier par</span>
-      <select name="tri" class="{{ input }}">
-        <option value="recent" {% if args.get('tri') == 'recent' %}selected{% endif %}>Plus récentes</option>
-        <option value="prix" {% if args.get('tri') == 'prix' %}selected{% endif %}>Prix croissant</option>
-        <option value="proche" {% if args.get('tri') == 'proche' %}selected{% endif %}>Plus proches de l'université</option>
-      </select>
-    </label>
-    <div class="flex gap-2">
-      <button type="submit" class="flex-1 min-h-[48px] rounded-xl bg-brand hover:bg-brand-dark text-white font-bold">Appliquer</button>
-      <a href="{{ url_for('main.search') }}" class="min-h-[48px] px-4 rounded-xl border-[1.5px] border-[#D5DCE5] font-semibold flex items-center">Effacer</a>
+      {% if active_filters %}<a href="{{ url_for('main.search') }}" class="shrink-0 min-h-[40px] px-3 flex items-center text-sm font-semibold text-brand">Tout effacer</a>{% endif %}
     </div>
-  </form>
+  </div>
+</div>
 
-  <section aria-label="Résultats" class="flex-[999_1_460px] min-w-0 flex flex-col gap-5">
-    <h1 class="text-2xl font-extrabold">
-      {{ total }} logement{{ 's' if total != 1 }} à louer{% if university %} près de {{ university.name }}{% endif %}
-    </h1>
+{# --- Résultats + carte --- #}
+<div class="lg:flex">
+  <section id="results-view" aria-label="Résultats" class="lg:w-[58%] xl:w-[55%] px-4 sm:px-6 py-6 flex flex-col gap-6">
     {% if listings %}
-      <div class="grid gap-6 grid-cols-[repeat(auto-fill,minmax(240px,1fr))]">
-        {% for l in listings %}{{ listing_card(l, distances.get(l.id), university) }}{% endfor %}
+      <div class="grid gap-x-5 gap-y-8 grid-cols-1 sm:grid-cols-2">
+        {% for l in listings %}
+          <div data-listing-id="{{ l.id }}">{{ listing_card(l, distances.get(l.id), university) }}</div>
+        {% endfor %}
       </div>
     {% else %}
-      <div class="p-8 rounded-2xl bg-slate-50 text-muted">Aucun logement ne correspond à ces critères. Essaie d'élargir ton budget ou la distance.</div>
+      <div class="p-8 rounded-2xl bg-slate-50 flex flex-col gap-3 items-start">
+        <p class="font-bold text-lg">Aucun logement ne correspond à ces critères.</p>
+        <p class="text-muted">Essaie d'élargir ton budget, la distance ou de retirer un filtre.</p>
+        <a href="{{ url_for('main.search') }}" class="px-4 py-2.5 rounded-xl bg-ink text-white font-semibold">Voir toutes les annonces</a>
+      </div>
     {% endif %}
 
     {% if pages > 1 %}
@@ -99,5 +79,212 @@
     </nav>
     {% endif %}
   </section>
+
+  <section id="map-view" aria-label="Carte des annonces"
+           class="hidden lg:block lg:flex-1 lg:sticky lg:top-0 lg:h-screen lg:self-start
+                  fixed inset-x-0 bottom-0 top-16 z-[900] lg:z-auto bg-[#E9EEF3]">
+    <div id="search-map" class="w-full h-full"></div>
+    {% if not map_points %}
+      <div class="absolute top-4 left-1/2 -translate-x-1/2 z-[500] px-4 py-2 rounded-full bg-white shadow text-sm font-semibold">Aucune annonce à afficher sur la carte</div>
+    {% endif %}
+  </section>
 </div>
+
+{# Bascule liste / carte (mobile) #}
+<button type="button" id="view-toggle" class="lg:hidden fixed bottom-5 left-1/2 -translate-x-1/2 z-[1000] min-h-[48px] px-5 rounded-full bg-ink text-white font-bold shadow-xl flex items-center gap-2">
+  <svg id="ico-map" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/></svg>
+  <svg id="ico-list" class="hidden" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+  <span id="view-label">Carte</span>
+</button>
+
+{# --- Panneau des filtres --- #}
+<div id="filters-panel" class="hidden fixed inset-0 z-[1200]" role="dialog" aria-modal="true" aria-labelledby="filters-title">
+  <div data-close-filters class="absolute inset-0 bg-ink/40"></div>
+  <form id="filters" method="get" action="{{ url_for('main.search') }}"
+        class="absolute inset-y-0 right-0 w-full sm:w-[420px] bg-white flex flex-col shadow-2xl">
+    <div class="h-16 px-5 flex items-center justify-between border-b border-line shrink-0">
+      <h2 id="filters-title" class="text-lg font-extrabold">Filtres</h2>
+      <button type="button" data-close-filters class="w-11 h-11 -mr-2 rounded-lg flex items-center justify-center hover:bg-slate-50" aria-label="Fermer les filtres">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+
+    <div class="flex-1 overflow-y-auto px-5 py-5 flex flex-col gap-6">
+      <label class="flex flex-col gap-2">
+        <span class="{{ legend }}">Ville ou quartier</span>
+        <input name="q" value="{{ args.get('q','') }}" class="{{ input }}" placeholder="Ex. Ennasr">
+      </label>
+      <div class="grid grid-cols-2 gap-3">
+        <label class="flex flex-col gap-2">
+          <span class="{{ legend }}">Gouvernorat</span>
+          <select name="gouvernorat" class="{{ input }}">
+            <option value="">Tous</option>
+            {% for g in governorates %}<option value="{{ g }}" {% if args.get('gouvernorat') == g %}selected{% endif %}>{{ g }}</option>{% endfor %}
+          </select>
+        </label>
+        <label class="flex flex-col gap-2">
+          <span class="{{ legend }}">Type</span>
+          <select name="type" class="{{ input }}">
+            <option value="">Tous</option>
+            {% for v, l in property_types %}<option value="{{ v }}" {% if args.get('type') == v %}selected{% endif %}>{{ l }}</option>{% endfor %}
+          </select>
+        </label>
+      </div>
+
+      <fieldset class="flex flex-col gap-2">
+        <legend class="{{ legend }} mb-2">Je cherche pour</legend>
+        <div class="grid grid-cols-3 gap-2">
+          {% for value, label in [('', 'Tous'), ('etudiants', 'Étudiant·e'), ('familles', 'Famille')] %}
+            <label class="relative">
+              <input type="radio" name="pour" value="{{ value }}" {% if args.get('pour', '') == value %}checked{% endif %} class="peer sr-only">
+              <span class="min-h-[44px] flex items-center justify-center rounded-lg border-[1.5px] border-[#D5DCE5] text-sm font-semibold cursor-pointer
+                           peer-checked:border-brand peer-checked:bg-brand-soft peer-focus-visible:ring-2 peer-focus-visible:ring-brand">{{ label }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </fieldset>
+
+      <div class="flex flex-col gap-2">
+        <span class="{{ legend }}">Budget (TND / mois)</span>
+        <div class="flex gap-3">
+          <label class="flex-1 flex flex-col gap-1 text-xs text-muted">Min<input type="number" min="0" inputmode="numeric" name="min" value="{{ args.get('min','') }}" class="{{ input }}"></label>
+          <label class="flex-1 flex flex-col gap-1 text-xs text-muted">Max<input type="number" min="0" inputmode="numeric" name="max" value="{{ args.get('max','') }}" class="{{ input }}"></label>
+        </div>
+      </div>
+
+      <label class="flex flex-col gap-2">
+        <span class="{{ legend }}">Chambres (minimum)</span>
+        <input type="number" min="1" inputmode="numeric" name="chambres" value="{{ args.get('chambres','') }}" class="{{ input }}">
+      </label>
+
+      <div class="flex flex-col gap-2">
+        <span class="{{ legend }}">Près de mon université</span>
+        <label class="flex flex-col gap-1 text-sm text-slate-700">Université
+          <select name="universite" class="{{ input }}">
+            <option value="">Aucune</option>
+            {% for u in universities %}<option value="{{ u.id }}" {% if university and university.id == u.id %}selected{% endif %}>{{ u.name }} – {{ u.zone }}</option>{% endfor %}
+          </select>
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-slate-700">À moins de (minutes à pied)
+          <input type="number" min="5" max="90" inputmode="numeric" name="minutes" value="{{ args.get('minutes', 20) }}" class="{{ input }}">
+        </label>
+      </div>
+
+      <fieldset class="flex flex-col gap-1">
+        <legend class="{{ legend }} mb-2">Options</legend>
+        {% set opt = "flex items-center gap-3 min-h-[40px]" %}
+        <label class="{{ opt }}"><input type="checkbox" name="meuble" value="1" {% if args.get('meuble') %}checked{% endif %} class="w-5 h-5 accent-[#1F5FA8]"> Meublé</label>
+        <label class="{{ opt }}"><input type="checkbox" name="coloc" value="1" {% if args.get('coloc') %}checked{% endif %} class="w-5 h-5 accent-[#1F5FA8]"> Colocation</label>
+        <label class="{{ opt }}"><input type="checkbox" name="filles" value="1" {% if args.get('filles') %}checked{% endif %} class="w-5 h-5 accent-[#1F5FA8]"> Colocation filles uniquement</label>
+        {% for field, label in amenities %}
+          <label class="{{ opt }}"><input type="checkbox" name="{{ field }}" value="1" {% if args.get(field) %}checked{% endif %} class="w-5 h-5 accent-[#1F5FA8]"> {{ label }}</label>
+        {% endfor %}
+      </fieldset>
+
+      <label class="sm:hidden flex flex-col gap-2">
+        <span class="{{ legend }}">Trier par</span>
+        <select data-sort-mobile class="{{ input }}">
+          <option value="recent" {% if args.get('tri', 'recent') == 'recent' %}selected{% endif %}>Plus récentes</option>
+          <option value="prix" {% if args.get('tri') == 'prix' %}selected{% endif %}>Prix croissant</option>
+          <option value="proche" {% if args.get('tri') == 'proche' %}selected{% endif %}>Plus proches de l'université</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="px-5 py-4 border-t border-line flex gap-3 shrink-0">
+      <a href="{{ url_for('main.search') }}" class="min-h-[48px] px-4 rounded-xl border-[1.5px] border-[#D5DCE5] font-semibold flex items-center">Effacer</a>
+      <button type="submit" class="flex-1 min-h-[48px] rounded-xl bg-brand hover:bg-brand-dark text-white font-bold">Afficher les résultats</button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block footer %}{{ super() }}<div class="lg:hidden h-20"></div>{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function () {
+  var points = {{ map_points|tojson }};
+  var uni = {{ map_university|tojson }};
+
+  /* ---------- Panneau des filtres ---------- */
+  var panel = document.getElementById('filters-panel');
+  var openers = document.querySelectorAll('[data-open-filters]');
+  function setFilters(open) {
+    panel.classList.toggle('hidden', !open);
+    document.body.classList.toggle('lock', open);
+    openers.forEach(function (b) { b.setAttribute('aria-expanded', open ? 'true' : 'false'); });
+    if (open) { var f = panel.querySelector('input,select'); if (f) f.focus(); }
+  }
+  openers.forEach(function (b) { b.addEventListener('click', function () { setFilters(true); }); });
+  panel.querySelectorAll('[data-close-filters]').forEach(function (b) { b.addEventListener('click', function () { setFilters(false); }); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !panel.classList.contains('hidden')) setFilters(false); });
+  // Sur mobile, le tri est dans le panneau : il remplace celui de la barre d'outils
+  var sortMobile = panel.querySelector('[data-sort-mobile]');
+  var sortMain = document.querySelector('select[name="tri"][form="filters"]');
+  if (sortMobile && sortMain) sortMobile.addEventListener('change', function () { sortMain.value = sortMobile.value; });
+
+  /* ---------- Carte ---------- */
+  var mapEl = document.getElementById('search-map');
+  var map = L.map(mapEl, { zoomControl: true, scrollWheelZoom: true }).setView([36.82, 10.18], 11);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(map);
+
+  function fmt(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
+  function esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+  var markers = {}, bounds = [];
+  points.forEach(function (p) {
+    var icon = L.divIcon({ className: '', html: '<div class="price-pin" data-pin="' + p.id + '">' + fmt(p.price) + '</div>', iconSize: null });
+    var m = L.marker([p.lat, p.lng], { icon: icon, riseOnHover: true, title: p.title }).addTo(map);
+    var img = p.photo ? '<img src="' + p.photo + '" alt="" style="width:100%;height:130px;object-fit:cover;display:block">'
+                      : '<div style="height:80px;background:#DCE6F2"></div>';
+    m.bindPopup('<a href="' + p.url + '" style="display:block;color:#0F1B2D;text-decoration:none">' + img +
+      '<div style="padding:10px 12px 12px;font-family:inherit"><div style="font-weight:700;font-size:14px;line-height:1.3">' + esc(p.title) + '</div>' +
+      '<div style="font-size:12px;color:#4A5568;margin-top:2px">' + esc(p.place) + '</div>' +
+      '<div style="font-weight:800;font-size:15px;margin-top:6px">' + fmt(p.price) + ' <span style="font-weight:500;font-size:12px;color:#4A5568">TND / mois</span></div></div></a>',
+      { closeButton: false, offset: [0, -4] });
+    markers[p.id] = m;
+    bounds.push([p.lat, p.lng]);
+  });
+
+  if (uni) {
+    L.marker([uni.lat, uni.lng], { icon: L.divIcon({ className: '', html: '<div class="uni-pin">' + esc(uni.name) + '</div>', iconSize: null }), zIndexOffset: 1000 }).addTo(map);
+    // Rayon approximatif correspondant aux minutes de marche (≈ 70 m par minute)
+    L.circle([uni.lat, uni.lng], { radius: uni.minutes * 70, color: '#1F5FA8', weight: 1.5, dashArray: '6 6', fillOpacity: 0.06 }).addTo(map);
+    bounds.push([uni.lat, uni.lng]);
+  }
+  function fit() {
+    map.invalidateSize();
+    if (bounds.length > 1) map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+    else if (bounds.length === 1) map.setView(bounds[0], 14);
+  }
+  fit();
+
+  // Survol d'une carte d'annonce => mise en avant du prix sur la carte
+  function pin(id) { return document.querySelector('[data-pin="' + id + '"]'); }
+  document.querySelectorAll('[data-listing-id]').forEach(function (el) {
+    var id = el.getAttribute('data-listing-id');
+    el.addEventListener('mouseenter', function () { var p = pin(id); if (p) { p.classList.add('is-active'); markers[id].setZIndexOffset(900); } });
+    el.addEventListener('mouseleave', function () { var p = pin(id); if (p) { p.classList.remove('is-active'); markers[id].setZIndexOffset(0); } });
+  });
+
+  /* ---------- Bascule liste / carte sur mobile ---------- */
+  var toggle = document.getElementById('view-toggle'), mapView = document.getElementById('map-view');
+  var showingMap = false;
+  toggle.addEventListener('click', function () {
+    showingMap = !showingMap;
+    mapView.classList.toggle('hidden', !showingMap);
+    document.body.classList.toggle('lock', showingMap);
+    document.getElementById('view-label').textContent = showingMap ? 'Liste' : 'Carte';
+    document.getElementById('ico-map').classList.toggle('hidden', showingMap);
+    document.getElementById('ico-list').classList.toggle('hidden', !showingMap);
+    if (showingMap) setTimeout(fit, 50);
+  });
+  window.addEventListener('resize', function () {
+    if (window.innerWidth >= 1024 && showingMap) toggle.click();
+    map.invalidateSize();
+  });
+})();
+</script>
 {% endblock %}

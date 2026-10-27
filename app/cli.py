@@ -1,5 +1,6 @@
 import os
 from datetime import date
+
 import click
 
 from app import db

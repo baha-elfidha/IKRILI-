@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}Politique de confidentialité – IKRILI{% endblock %}
+{% block content %}
+<article class="max-w-3xl mx-auto px-4 sm:px-6 py-10 flex flex-col gap-6 leading-relaxed text-[16px] text-slate-800">
+  <header class="flex flex-col gap-2">
+    <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-ink">Politique de confidentialité</h1>
+    <p class="text-sm text-muted">Dernière mise à jour : {{ updated }}</p>
+  </header>
+
+  <p>Cette page explique quelles données personnelles IKRILI collecte, pourquoi, combien de temps elles sont conservées et quels sont tes droits, conformément à la loi organique n° 2004-63 du 27 juillet 2004 relative à la protection des données à caractère personnel.</p>
+
+  <section class="flex flex-col gap-2">
+    <h2 class="text-xl font-extrabold text-ink">1. Responsable du traitement</h2>
+    <p>{{ owner_name }}, éditeur du site IKRILI ({{ site_url }}).<br>
+    Contact : <a class="text-brand font-semibold" href="mailto:{{ contact_email }}">{{ contact_email }}</a></p>
+  </section>
+
+  <section class="flex flex-col gap-2">
+    <h2 class="text-xl font-extrabold text-ink">2. Données collectées</h2>
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-[15px] border-collapse">
+        <thead>
+          <tr class="border-b-2 border-line">
+            <th class="py-2 pr-4 font-bold">Données</th>
+            <th class="py-2 font-bold">Quand</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="border-b border-line"><td class="py-2 pr-4">Nom, e-mail, téléphone (facultatif), mot de passe chiffré</td><td class="py-2">À l'inscription</td></tr>
+          <tr class="border-b border-line"><td class="py-2 pr-4">Contenu des annonces : description, prix, photos, quartier, position approximative sur la carte</td><td class="py-2">À la publication d'une annonce</td></tr>
+          <tr class="border-b border-line"><td class="py-2 pr-4">Messages et demandes de visite</td><td class="py-2">Quand tu contactes un propriétaire</td></tr>
+          <tr class="border-b border-line"><td class="py-2 pr-4">Favoris</td><td class="py-2">Quand tu enregistres une annonce</td></tr>
+          <tr class="border-b border-line"><td class="py-2 pr-4">Signalements (motif, détails)</td><td class="py-2">Quand tu signales une annonce</td></tr>
+          <tr><td class="py-2 pr-4">Données techniques : adresse IP, navigateur, pages consultées (journaux du serveur)</td><td class="py-2">À chaque visite</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>IKRILI ne collecte pas de données bancaires : aucun paiement ne passe par le site.</p>
+  </section>
+
+  <section class="flex flex-col gap-2">
+    <h2 class="text-xl font-extrabold text-ink">3. Pourquoi ces données sont utilisées</h2>
+    <ul class="list-disc pl-6 flex flex-col gap-1">
+      <li>créer et gérer ton compte ;</li>
+      <li>publier et afficher les annonces ;</li>
+      <li>transmettre tes messages et demandes de visite au propriétaire concerné ;</li>
+      <li>lutter contre les arnaques et traiter les signalements ;</li>
+      <li>assurer la sécurité et le bon fonctionnement du site.</li>
+    </ul>
+    <p>Tes données ne sont ni vendues, ni louées, ni utilisées pour de la publicité ciblée.</p>
+  </section>
+
+  <section class="flex flex-col gap-2">
+    <h2 class="text-xl font-extrabold text-ink">4. Qui voit quoi</h2>
+    <ul class="list-disc pl-6 flex flex-col gap-1">
+      <li><strong>Tous les visiteurs</strong> voient les annonces publiées et le nom du propriétaire. L'adresse exacte n'est jamais affichée : seule une zone approximative apparaît sur la carte.</li>
+      <li><strong>Les utilisateurs connectés</strong> peuvent voir le téléphone d'un propriétaire, si celui-ci l'a renseigné.</li>
+      <li><strong>Quand tu contactes un propriétaire</strong>, il reçoit ton nom, ton e-mail, ton téléphone (si renseigné) et ton message.</li>
+      <li><strong>L'équipe IKRILI</strong> peut accéder aux données pour traiter un signalement ou une demande d'assistance.</li>
+    </ul>
+  </section>
+
+  <section class="flex flex-col gap-2">
+    <h2 class="text-xl font-extrabold text-ink">5. Hébergement et prestataires</h2>
+    <p>Le site et sa base de données sont hébergés par Render Services, Inc. Les serveurs peuvent être situés hors de Tunisie. Les cartes sont affichées grâce à OpenStreetMap : ton navigateur charge alors des images de carte depuis leurs serveurs.</p>
+  </section>
+
+  <section class="flex flex-col gap-2">
+    <h2 class="text-xl font-extrabold text-ink">6. Durée de conservation</h2>
+    <ul class="list-disc pl-6 flex flex-col gap-1">
+      <li>Compte : tant qu'il est actif, puis supprimé dans un délai de 30 jours après une demande de suppression.</li>
+      <li>Annonces : jusqu'à leur suppression par le propriétaire ou la suppression du compte.</li>
+      <li>Messages et demandes de visite : 12 mois après leur envoi.</li>
+      <li>Signalements : 12 mois, ou plus longtemps si nécessaire pour prévenir une fraude.</li>
+      <li>Journaux techniques : quelques semaines au maximum.</li>
+    </ul>
+  </section>
+
+  <section class="flex flex-col gap-2">
+    <h2 class="text-xl font-extrabold text-ink">7. Sécurité</h2>
+    <p>Les mots de passe sont enregistrés sous forme chiffrée (hachage) et ne sont jamais lisibles, même par l'équipe IKRILI. Le site est accessible uniquement en HTTPS et les formulaires sont protégés contre les envois frauduleux.</p>
+  </section>
+
+  <section class="flex flex-col gap-2">
+    <h2 class="text-xl font-extrabold text-ink">8. Cookies</h2>
+    <p>IKRILI utilise uniquement des cookies nécessaires au fonctionnement du site : garder ta session ouverte et sécuriser les formulaires. Aucun cookie publicitaire ni outil de suivi tiers n'est utilisé.</p>
+  </section>
+
+  <section class="flex flex-col gap-2">
+    <h2 class="text-xl font-extrabold text-ink">9. Tes droits</h2>
+    <p>Tu peux à tout moment :</p>
+    <ul class="list-disc pl-6 flex flex-col gap-1">
+      <li>accéder aux données qui te concernent ;</li>
+      <li>les faire corriger si elles sont inexactes ;</li>
+      <li>demander leur suppression ;</li>
+      <li>t'opposer à leur traitement pour un motif légitime.</li>
+    </ul>
+    <p>Pour exercer ces droits, écris à <a class="text-brand font-semibold" href="mailto:{{ contact_email }}">{{ contact_email }}</a>. Une réponse te sera apportée dans un délai d'un mois.</p>
+    <p>Tu peux aussi saisir l'Instance nationale de protection des données personnelles (INPDP) si tu estimes que tes droits ne sont pas respectés.</p>
+  </section>
+
+  <section class="flex flex-col gap-2">
+    <h2 class="text-xl font-extrabold text-ink">10. Mineurs</h2>
+    <p>Le site est réservé aux personnes âgées d'au moins 18 ans.</p>
+  </section>
+
+  <section class="flex flex-col gap-2">
+    <h2 class="text-xl font-extrabold text-ink">11. Modifications</h2>
+    <p>Cette politique peut être mise à jour. La date de dernière mise à jour figure en haut de la page ; en cas de changement important, les utilisateurs inscrits seront prévenus.</p>
+  </section>
+</article>
+{% endblock %}

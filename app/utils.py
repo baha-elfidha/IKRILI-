@@ -1,5 +1,6 @@
 import math
 import os
+import random
 import uuid
 
 from flask import current_app
@@ -28,6 +29,19 @@ def haversine_km(lat1, lon1, lat2, lon2):
     dl = math.radians(lon2 - lon1)
     a = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
     return 2 * r * math.asin(math.sqrt(a))
+
+
+def approx_coords(listing):
+    """Position floutée (décalage fixe de 100 à 200 m) pour ne jamais révéler l'adresse exacte.
+    Le décalage dépend de l'identifiant : il reste le même à chaque affichage."""
+    if listing.latitude is None or listing.longitude is None:
+        return None
+    rnd = random.Random(listing.id * 7919)
+    angle = rnd.uniform(0, 2 * math.pi)
+    dist_km = rnd.uniform(0.1, 0.2)
+    dlat = (dist_km / 111.0) * math.cos(angle)
+    dlng = (dist_km / (111.0 * math.cos(math.radians(listing.latitude)))) * math.sin(angle)
+    return round(listing.latitude + dlat, 5), round(listing.longitude + dlng, 5)
 
 
 def walking_minutes(km):

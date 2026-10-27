@@ -1,9 +1,9 @@
-from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
+from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
 from app import db
 from app.models import ContactRequest, Listing, Report, University
-from app.utils import GOVERNORATES, PROPERTY_TYPES, haversine_km, walking_minutes
+from app.utils import GOVERNORATES, PROPERTY_TYPES, approx_coords, haversine_km, walking_minutes
 
 bp = Blueprint("main", __name__)
 
@@ -83,6 +83,22 @@ def search():
         if sort == "proche":
             listings.sort(key=lambda l: distances[l.id])
 
+    # Points pour la carte : toutes les annonces filtrées (pas seulement la page),
+    # avec une position volontairement approximative.
+    map_points = []
+    for l in listings[:300]:
+        pos = approx_coords(l)
+        if not pos:
+            continue
+        map_points.append({
+            "id": l.id, "lat": pos[0], "lng": pos[1], "price": l.price_tnd,
+            "title": l.title, "place": f"{l.city}, {l.governorate}",
+            "url": url_for("main.listing_detail", listing_id=l.id),
+            "photo": url_for("static", filename="uploads/" + l.cover.filename) if l.cover else None,
+        })
+    map_university = ({"lat": university.latitude, "lng": university.longitude, "name": university.name,
+                       "minutes": args.get("minutes", default=30, type=int)} if university else None)
+
     per_page = 12
     page = max(1, args.get("page", default=1, type=int))
     total = len(listings)
@@ -95,7 +111,35 @@ def search():
         universities=University.query.order_by(University.name).all(),
         governorates=GOVERNORATES, property_types=PROPERTY_TYPES,
         amenities=Listing.AMENITIES, args=args,
+        map_points=map_points, map_university=map_university,
+        chips=_quick_chips(args), active_filters=_count_filters(args),
     )
+
+
+_FILTER_KEYS = ["gouvernorat", "type", "min", "max", "chambres", "pour", "meuble", "coloc", "filles",
+                "universite"] + [f for f, _ in Listing.AMENITIES]
+
+
+def _count_filters(args):
+    return sum(1 for k in _FILTER_KEYS if args.get(k))
+
+
+def _quick_chips(args):
+    """Filtres rapides affichés en pastilles : un clic ajoute ou retire le filtre."""
+    defs = [("Étudiants", "pour", "etudiants"), ("Familles", "pour", "familles"),
+            ("Meublé", "meuble", "1"), ("Colocation", "coloc", "1"),
+            ("Moins de 500 TND", "max", "500"), ("Internet", "has_internet", "1"),
+            ("Parking", "has_parking", "1")]
+    chips = []
+    for label, key, value in defs:
+        params = {k: v for k, v in args.items() if k != "page"}
+        active = params.get(key) == value
+        if active:
+            params.pop(key)
+        else:
+            params[key] = value
+        chips.append({"label": label, "active": active, "url": url_for("main.search", **params)})
+    return chips
 
 
 @bp.route("/annonce/<int:listing_id>")
@@ -111,7 +155,8 @@ def listing_detail(listing_id):
                 nearby.append((u, mins))
         nearby.sort(key=lambda x: x[1])
     is_fav = current_user.is_authenticated and listing in current_user.favorite_listings
-    return render_template("listing.html", listing=listing, nearby=nearby[:4], is_fav=is_fav)
+    return render_template("listing.html", listing=listing, nearby=nearby[:4], is_fav=is_fav,
+                           approx=approx_coords(listing))
 
 
 @bp.route("/annonce/<int:listing_id>/contact", methods=["POST"])
@@ -181,3 +226,19 @@ def report(listing_id):
 @bp.route("/conseils-anti-arnaque")
 def safety():
     return render_template("safety.html")
+
+
+def _legal_context():
+    cfg = current_app.config
+    return dict(owner_name=cfg["LEGAL_OWNER_NAME"], contact_email=cfg["CONTACT_EMAIL"],
+                site_url=cfg["SITE_URL"], updated=cfg["LEGAL_UPDATED"])
+
+
+@bp.route("/conditions-utilisation")
+def terms():
+    return render_template("legal/cgu.html", **_legal_context())
+
+
+@bp.route("/confidentialite")
+def privacy():
+    return render_template("legal/confidentialite.html", **_legal_context())

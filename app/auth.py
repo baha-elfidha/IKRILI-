@@ -35,6 +35,8 @@ def register():
             errors.append("Le mot de passe doit contenir au moins 8 caractères.")
         if role not in ("locataire", "proprietaire"):
             role = "locataire"
+        if not form.get("accept_terms"):
+            errors.append("Tu dois accepter les conditions d'utilisation et la politique de confidentialité.")
         if User.query.filter_by(email=email).first():
             errors.append("Un compte existe déjà avec cet e-mail.")
         if errors:

@@ -25,6 +25,10 @@
     <label class="flex flex-col gap-1.5 font-semibold text-sm">Mot de passe (8 caractères minimum)
       <input type="password" name="password" required minlength="8" autocomplete="new-password" class="{{ input }}">
     </label>
+    <label class="flex items-start gap-2.5 text-sm leading-relaxed">
+      <input type="checkbox" name="accept_terms" value="1" required class="w-[18px] h-[18px] mt-0.5 shrink-0">
+      <span>J'ai 18 ans ou plus et j'accepte les <a href="{{ url_for('main.terms') }}" target="_blank" class="text-brand font-semibold">conditions d'utilisation</a> et la <a href="{{ url_for('main.privacy') }}" target="_blank" class="text-brand font-semibold">politique de confidentialité</a>.</span>
+    </label>
     <button type="submit" class="min-h-[52px] rounded-xl bg-brand hover:bg-brand-dark text-white font-bold">Créer mon compte</button>
   </form>
   <p class="text-sm text-muted">Déjà inscrit ? <a href="{{ url_for('auth.login') }}" class="text-brand font-semibold">Se connecter</a></p>

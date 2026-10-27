@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Conditions d'utilisation – IKRILI{% endblock %}
+{% block content %}
+<article class="max-w-3xl mx-auto px-4 sm:px-6 py-10 flex flex-col gap-6 leading-relaxed text-[16px] text-slate-800">
+  <header class="flex flex-col gap-2">
+    <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-ink">Conditions générales d'utilisation</h1>
+    <p class="text-sm text-muted">Dernière mise à jour : {{ updated }}</p>
+  </header>
+
+  <section class="flex flex-col gap-2">
+    <h2 class="text-xl font-extrabold text-ink">1. Objet</h2>
+    <p>Les présentes conditions encadrent l'utilisation du site IKRILI ({{ site_url }}), une plateforme de mise en relation entre des personnes qui cherchent un logement à louer en Tunisie (locataires) et des personnes qui proposent un logement à la location (propriétaires).</p>
+    <p>En créant un compte ou en utilisant le site, tu acceptes ces conditions. Si tu ne les acceptes pas, n'utilise pas le site.</p>
+  </section>
+
+  <section class="flex flex-col gap-2">
+    <h2 class="text-xl font-extrabold text-ink">2. Éditeur du site</h2>
+    <p>Le site est édité par {{ owner_name }}, joignable à l'adresse <a class="text-brand font-semibold" href="mailto:{{ contact_email }}">{{ contact_email }}</a>.</p>
+    <p>Le site est hébergé par Render Services, Inc. (render.com).</p>
+  </section>
+
+  <section class="flex flex-col gap-2">
+    <h2 class="text-xl font-extrabold text-ink">3. Rôle d'IKRILI</h2>
+    <p>IKRILI est un intermédiaire technique. IKRILI n'est ni propriétaire, ni agent immobilier, ni partie au contrat de location conclu entre un locataire et un propriétaire.</p>
+    <p>IKRILI ne garantit pas l'exactitude des annonces, la disponibilité des logements ni le comportement des utilisateurs. Le badge « vérifié » signifie seulement que certaines vérifications ont été faites ; il ne remplace pas ta propre prudence.</p>
+  </section>
+
+  <section class="flex flex-col gap-2">
+    <h2 class="text-xl font-extrabold text-ink">4. Compte utilisateur</h2>
+    <ul class="list-disc pl-6 flex flex-col gap-1">
+      <li>Tu dois avoir au moins 18 ans pour créer un compte.</li>
+      <li>Les informations que tu fournis (nom, e-mail, téléphone) doivent être exactes.</li>
+      <li>Tu es responsable de la confidentialité de ton mot de passe et de toute activité réalisée avec ton compte.</li>
+      <li>Un seul compte par personne. Les comptes créés pour tromper d'autres utilisateurs seront supprimés.</li>
+    </ul>
+  </section>
+
+  <section class="flex flex-col gap-2">
+    <h2 class="text-xl font-extrabold text-ink">5. Règles pour les annonces</h2>
+    <p>En publiant une annonce, le propriétaire s'engage à :</p>
+    <ul class="list-disc pl-6 flex flex-col gap-1">
+      <li>proposer un logement réel, dont il est propriétaire ou qu'il est autorisé à louer ;</li>
+      <li>publier des photos et des informations fidèles (prix, surface, équipements, charges) ;</li>
+      <li>retirer ou marquer comme « louée » l'annonce dès que le logement n'est plus disponible ;</li>
+      <li>ne pas exiger de paiement avant que le locataire ait pu visiter le logement ;</li>
+      <li>ne pas publier de contenu discriminatoire, injurieux ou illégal ;</li>
+      <li>respecter la réglementation tunisienne applicable à la location.</li>
+    </ul>
+    <p>IKRILI peut masquer ou supprimer, sans préavis, toute annonce qui ne respecte pas ces règles ou qui fait l'objet de signalements sérieux.</p>
+  </section>
+
+  <section class="flex flex-col gap-2">
+    <h2 class="text-xl font-extrabold text-ink">6. Échanges entre utilisateurs</h2>
+    <p>Les messages et demandes de visite servent uniquement à organiser une location. Il est interdit de les utiliser pour du démarchage, de la publicité ou du harcèlement.</p>
+    <p>La visite, la négociation, la signature du contrat et le paiement se font directement entre le locataire et le propriétaire, sous leur seule responsabilité.</p>
+  </section>
+
+  <section class="flex flex-col gap-2">
+    <h2 class="text-xl font-extrabold text-ink">7. Signalements</h2>
+    <p>Chaque annonce peut être signalée via le lien « Signaler cette annonce ». IKRILI examine les signalements et peut suspendre l'annonce ou le compte concerné.</p>
+  </section>
+
+  <section class="flex flex-col gap-2">
+    <h2 class="text-xl font-extrabold text-ink">8. Contenus publiés</h2>
+    <p>Tu restes propriétaire des textes et photos que tu publies. Tu autorises IKRILI à les afficher sur le site, pour la durée de publication de l'annonce. Tu garantis disposer des droits sur ces photos.</p>
+  </section>
+
+  <section class="flex flex-col gap-2">
+    <h2 class="text-xl font-extrabold text-ink">9. Prix</h2>
+    <p>L'inscription et la publication d'annonces sont actuellement gratuites. Si des services payants sont proposés à l'avenir, leurs conditions seront affichées clairement avant tout paiement.</p>
+  </section>
+
+  <section class="flex flex-col gap-2">
+    <h2 class="text-xl font-extrabold text-ink">10. Responsabilité</h2>
+    <p>IKRILI fait de son mieux pour que le site fonctionne correctement, sans pouvoir garantir l'absence d'interruptions ou d'erreurs. IKRILI ne peut être tenu responsable d'un litige entre un locataire et un propriétaire, ni d'une perte liée à une annonce trompeuse publiée par un utilisateur.</p>
+  </section>
+
+  <section class="flex flex-col gap-2">
+    <h2 class="text-xl font-extrabold text-ink">11. Suppression du compte</h2>
+    <p>Tu peux demander la suppression de ton compte à tout moment en écrivant à <a class="text-brand font-semibold" href="mailto:{{ contact_email }}">{{ contact_email }}</a>. IKRILI peut suspendre ou supprimer un compte qui enfreint ces conditions.</p>
+  </section>
+
+  <section class="flex flex-col gap-2">
+    <h2 class="text-xl font-extrabold text-ink">12. Données personnelles</h2>
+    <p>Le traitement de tes données est décrit dans la <a class="text-brand font-semibold" href="{{ url_for('main.privacy') }}">politique de confidentialité</a>.</p>
+  </section>
+
+  <section class="flex flex-col gap-2">
+    <h2 class="text-xl font-extrabold text-ink">13. Modification et droit applicable</h2>
+    <p>Ces conditions peuvent évoluer. La date de mise à jour figure en haut de la page ; en cas de changement important, les utilisateurs inscrits seront prévenus.</p>
+    <p>Ces conditions sont régies par le droit tunisien. En cas de litige, une solution amiable sera recherchée en priorité ; à défaut, les tribunaux tunisiens compétents seront saisis.</p>
+  </section>
+</article>
+{% endblock %}

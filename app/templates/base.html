@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}IKRILI – Logements à louer en Tunisie{% endblock %}</title>
   <meta name="description" content="{% block meta_description %}Appartements, maisons et colocations à louer en Tunisie pour étudiants et familles. Annonces vérifiées.{% endblock %}">
+  <meta name="theme-color" content="#1F5FA8">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
   <script src="https://cdn.tailwindcss.com"></script>
@@ -21,35 +22,65 @@
       }
     }
   </script>
+  <style>
+    .no-scrollbar { scrollbar-width: none; } .no-scrollbar::-webkit-scrollbar { display: none; }
+    body.lock { overflow: hidden; }
+  </style>
+  {% block head %}{% endblock %}
 </head>
 <body class="bg-white text-ink font-sans antialiased min-h-screen flex flex-col">
 
-<header class="border-b border-line">
-  <div class="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex flex-wrap items-center justify-between gap-3">
-    <a href="{{ url_for('main.index') }}" class="flex items-center gap-2.5 no-underline text-ink">
+<header class="border-b border-line bg-white relative z-[1100]">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
+    <a href="{{ url_for('main.index') }}" class="flex items-center gap-2.5 text-ink">
       <span class="w-9 h-9 rounded-lg bg-brand flex items-center justify-center">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg>
       </span>
       <span class="text-xl font-extrabold tracking-wider">IKRILI</span>
     </a>
-    <nav aria-label="Navigation principale" class="flex flex-wrap items-center gap-1 text-[15px] font-semibold">
-      <a href="{{ url_for('main.search') }}" class="px-3 py-2.5 text-slate-700 hover:text-brand">Louer</a>
-      <a href="{{ url_for('main.search', coloc=1) }}" class="px-3 py-2.5 text-slate-700 hover:text-brand">Colocation</a>
+
+    {% set navlink = "px-3 py-2.5 rounded-lg text-slate-700 hover:text-brand hover:bg-slate-50" %}
+    <nav aria-label="Navigation principale" class="hidden md:flex items-center gap-1 text-[15px] font-semibold">
+      <a href="{{ url_for('main.search') }}" class="{{ navlink }}">Louer</a>
+      <a href="{{ url_for('main.search', coloc=1) }}" class="{{ navlink }}">Colocation</a>
       {% if current_user.is_authenticated %}
-        <a href="{{ url_for('main.favorites') }}" class="px-3 py-2.5 text-slate-700 hover:text-brand">Favoris</a>
-        <a href="{{ url_for('listings.dashboard') }}" class="px-3 py-2.5 text-slate-700 hover:text-brand">Mon espace</a>
-        <a href="{{ url_for('auth.logout') }}" class="px-3 py-2.5 text-slate-700 hover:text-brand">Déconnexion</a>
+        <a href="{{ url_for('main.favorites') }}" class="{{ navlink }}">Favoris</a>
+        <a href="{{ url_for('listings.dashboard') }}" class="{{ navlink }}">Mon espace</a>
+        <a href="{{ url_for('auth.logout') }}" class="{{ navlink }}">Déconnexion</a>
       {% else %}
-        <a href="{{ url_for('auth.login') }}" class="px-3 py-2.5 text-slate-700 hover:text-brand">Connexion</a>
+        <a href="{{ url_for('auth.login') }}" class="{{ navlink }}">Connexion</a>
       {% endif %}
       <a href="{{ url_for('listings.create') }}" class="ml-1 px-4 py-2.5 rounded-lg bg-ink text-white hover:bg-slate-800">Publier une annonce</a>
     </nav>
+
+    <button type="button" id="menu-btn" class="md:hidden w-11 h-11 -mr-2 rounded-lg flex items-center justify-center hover:bg-slate-50"
+            aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="mobile-menu">
+      <svg id="menu-open-ico" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      <svg id="menu-close-ico" class="hidden" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
   </div>
+
+  <nav id="mobile-menu" aria-label="Menu mobile" class="hidden md:hidden absolute inset-x-0 top-16 bg-white border-b border-line shadow-lg">
+    <div class="px-4 py-3 flex flex-col text-base font-semibold">
+      {% set mlink = "px-3 py-3.5 rounded-lg hover:bg-slate-50" %}
+      <a href="{{ url_for('main.search') }}" class="{{ mlink }}">Louer un logement</a>
+      <a href="{{ url_for('main.search', coloc=1) }}" class="{{ mlink }}">Colocation</a>
+      {% if current_user.is_authenticated %}
+        <a href="{{ url_for('main.favorites') }}" class="{{ mlink }}">Mes favoris</a>
+        <a href="{{ url_for('listings.dashboard') }}" class="{{ mlink }}">Mon espace</a>
+        <a href="{{ url_for('auth.logout') }}" class="{{ mlink }} text-muted">Déconnexion</a>
+      {% else %}
+        <a href="{{ url_for('auth.login') }}" class="{{ mlink }}">Connexion</a>
+        <a href="{{ url_for('auth.register') }}" class="{{ mlink }}">Créer un compte</a>
+      {% endif %}
+      <a href="{{ url_for('listings.create') }}" class="mt-2 mb-1 px-4 py-3.5 rounded-xl bg-ink text-white text-center">Publier une annonce</a>
+    </div>
+  </nav>
 </header>
 
 {% with messages = get_flashed_messages(with_categories=true) %}
   {% if messages %}
-  <div class="max-w-6xl mx-auto w-full px-4 sm:px-6 pt-4 space-y-2" role="status">
+  <div class="max-w-7xl mx-auto w-full px-4 sm:px-6 pt-4 space-y-2" role="status">
     {% for category, message in messages %}
       <div class="px-4 py-3 rounded-xl text-[15px] font-semibold
         {% if category == 'error' %}bg-red-50 text-red-800{% elif category == 'success' %}bg-okbg text-ok{% else %}bg-brand-soft text-brand-dark{% endif %}">
@@ -64,14 +95,35 @@
   {% block content %}{% endblock %}
 </main>
 
+{% block footer %}
 <footer class="border-t border-line mt-12">
-  <div class="max-w-6xl mx-auto px-4 sm:px-6 py-7 flex flex-wrap justify-between gap-4 text-sm text-muted">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 py-7 flex flex-wrap justify-between gap-4 text-sm text-muted">
     <span><strong class="text-ink tracking-wider">IKRILI</strong> · Location de logements en Tunisie</span>
-    <div class="flex flex-wrap gap-5">
+    <div class="flex flex-wrap gap-x-5 gap-y-2">
       <a href="{{ url_for('main.safety') }}" class="hover:text-brand">Conseils anti-arnaque</a>
-      <a href="mailto:contact@ikrili.tn" class="hover:text-brand">Contact</a>
+      <a href="{{ url_for('main.terms') }}" class="hover:text-brand">Conditions d'utilisation</a>
+      <a href="{{ url_for('main.privacy') }}" class="hover:text-brand">Confidentialité</a>
+      <a href="mailto:{{ config['CONTACT_EMAIL'] }}" class="hover:text-brand">Contact</a>
     </div>
   </div>
 </footer>
+{% endblock %}
+
+<script>
+  (function () {
+    var btn = document.getElementById('menu-btn'), menu = document.getElementById('mobile-menu');
+    if (!btn) return;
+    function set(open) {
+      menu.classList.toggle('hidden', !open);
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      btn.setAttribute('aria-label', open ? 'Fermer le menu' : 'Ouvrir le menu');
+      document.getElementById('menu-open-ico').classList.toggle('hidden', open);
+      document.getElementById('menu-close-ico').classList.toggle('hidden', !open);
+    }
+    btn.addEventListener('click', function () { set(menu.classList.contains('hidden')); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') set(false); });
+  })();
+</script>
+{% block scripts %}{% endblock %}
 </body>
 </html>
