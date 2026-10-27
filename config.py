@@ -8,9 +8,11 @@ BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 def _database_url():
     url = os.environ.get("DATABASE_URL", "sqlite:///" + os.path.join(BASE_DIR, "ikrili.db"))
-    # Render / Heroku donnent parfois "postgres://", SQLAlchemy attend "postgresql://"
-    if url.startswith("postgres://"):
-        url = url.replace("postgres://", "postgresql://", 1)
+    # Render donne "postgres://" ou "postgresql://" : on force le pilote psycopg2
+    # (SQLAlchemy 2.1 utilise sinon psycopg 3, qui n'est pas installé)
+    for prefix in ("postgres://", "postgresql://"):
+        if url.startswith(prefix):
+            url = "postgresql+psycopg2://" + url[len(prefix):]
     return url
 
 
