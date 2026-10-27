@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Conseils anti-arnaque – IKRILI{% endblock %}
+{% block content %}
+<div class="max-w-2xl mx-auto px-4 sm:px-6 py-10 flex flex-col gap-6">
+  <h1 class="text-3xl font-extrabold tracking-tight">Louer en toute sécurité</h1>
+  <ul class="flex flex-col gap-4 text-[16px] leading-relaxed">
+    <li><strong>Visite d'abord, argent ensuite.</strong> Ne verse jamais d'avance ni de caution avant d'avoir visité le logement.</li>
+    <li><strong>Méfie-toi des prix trop bas.</strong> Un S+2 meublé très en dessous des prix du quartier doit éveiller les soupçons.</li>
+    <li><strong>Demande un contrat écrit.</strong> Vérifie l'identité du propriétaire et fais signer un contrat de location.</li>
+    <li><strong>Reste sur IKRILI pour les premiers échanges.</strong> Cela garde une trace en cas de problème.</li>
+    <li><strong>Signale toute annonce suspecte</strong> grâce au lien « Signaler cette annonce ».</li>
+  </ul>
+  <a href="{{ url_for('main.search') }}" class="self-start px-5 py-3 rounded-xl bg-brand text-white font-bold">Chercher un logement</a>
+</div>
+{% endblock %}

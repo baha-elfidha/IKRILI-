@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% from "_macros.html" import listing_card %}
+{% block content %}
+
+<section class="bg-brand-soft">
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 pt-16 pb-14 flex flex-col gap-7">
+    <div class="flex flex-wrap gap-2">
+      <span class="px-3 py-1.5 rounded-full bg-white text-[13px] font-semibold text-slate-700">Étudiants</span>
+      <span class="px-3 py-1.5 rounded-full bg-white text-[13px] font-semibold text-slate-700">Familles</span>
+      <span class="px-3 py-1.5 rounded-full bg-white text-[13px] font-semibold text-slate-700">Partout en Tunisie</span>
+    </div>
+    <h1 class="text-4xl sm:text-6xl font-extrabold leading-[1.05] tracking-tight max-w-3xl">Trouve ton logement à louer, sans passer par dix groupes Facebook.</h1>
+    <p class="text-lg text-muted max-w-2xl leading-relaxed">Appartements, maisons et chambres en colocation, avec des annonces vérifiées et des filtres pensés pour les étudiants comme pour les familles.</p>
+
+    <form action="{{ url_for('main.search') }}" method="get" role="search" aria-label="Rechercher un logement"
+          class="bg-white rounded-2xl p-3 flex flex-wrap gap-2 items-end shadow-[0_8px_30px_rgba(15,27,45,0.08)] max-w-5xl">
+      <label class="flex-[2_1_240px] flex flex-col gap-1.5 px-2.5 py-1.5">
+        <span class="text-xs font-bold uppercase tracking-wider text-muted">Ville ou quartier</span>
+        <input name="q" type="text" placeholder="Ex. El Ghazela, Ariana, La Marsa…" class="outline-none text-base py-1.5 bg-transparent">
+      </label>
+      <label class="flex-[1_1_170px] flex flex-col gap-1.5 px-2.5 py-1.5 sm:border-l border-line">
+        <span class="text-xs font-bold uppercase tracking-wider text-muted">Type</span>
+        <select name="type" class="outline-none text-base py-1.5 bg-transparent">
+          <option value="">Tous les types</option>
+          {% for value, label in property_types %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+        </select>
+      </label>
+      <label class="flex-[1_1_150px] flex flex-col gap-1.5 px-2.5 py-1.5 sm:border-l border-line">
+        <span class="text-xs font-bold uppercase tracking-wider text-muted">Budget max (TND)</span>
+        <input name="max" type="number" min="0" placeholder="800" class="outline-none text-base py-1.5 bg-transparent">
+      </label>
+      <button type="submit" class="flex items-center gap-2 px-6 py-4 rounded-xl bg-brand hover:bg-brand-dark text-white font-bold">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        Rechercher
+      </button>
+    </form>
+
+    <div class="flex flex-wrap gap-3">
+      <a href="{{ url_for('main.search', pour='etudiants') }}" class="px-4 py-3 rounded-xl border-[1.5px] border-[#C9D6E6] bg-white font-semibold hover:border-brand">Je suis étudiant·e</a>
+      <a href="{{ url_for('main.search', pour='familles') }}" class="px-4 py-3 rounded-xl border-[1.5px] border-[#C9D6E6] bg-white font-semibold hover:border-brand">Je cherche pour ma famille</a>
+    </div>
+  </div>
+</section>
+
+{% if universities %}
+<section class="max-w-6xl mx-auto px-4 sm:px-6 pt-14 flex flex-col gap-5">
+  <h2 class="text-3xl font-extrabold tracking-tight">Près de ton université</h2>
+  <div class="flex flex-wrap gap-2.5">
+    {% for u in universities %}
+      <a href="{{ url_for('main.search', universite=u.id, minutes=20, tri='proche') }}" class="flex flex-col px-4 py-3.5 rounded-xl bg-slate-50 hover:bg-brand-soft min-w-[170px]">
+        <span class="font-bold">{{ u.name }}</span>
+        <span class="text-[13px] text-muted">{{ u.zone }}</span>
+      </a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<section class="max-w-6xl mx-auto px-4 sm:px-6 pt-12 flex flex-col gap-5">
+  <div class="flex flex-wrap items-baseline justify-between gap-3">
+    <h2 class="text-3xl font-extrabold tracking-tight">Annonces récentes</h2>
+    <a href="{{ url_for('main.search') }}" class="font-semibold text-brand">Voir toutes les annonces</a>
+  </div>
+  {% if recent %}
+    <div class="grid gap-6 grid-cols-[repeat(auto-fill,minmax(250px,1fr))]">
+      {% for l in recent %}{{ listing_card(l) }}{% endfor %}
+    </div>
+  {% else %}
+    <p class="text-muted">Aucune annonce pour le moment. <a class="text-brand font-semibold" href="{{ url_for('listings.create') }}">Publie la première !</a></p>
+  {% endif %}
+</section>
+
+<section class="max-w-6xl mx-auto px-4 sm:px-6 pt-14 flex flex-col gap-6">
+  <h2 class="text-3xl font-extrabold tracking-tight">Pourquoi IKRILI ?</h2>
+  <div class="grid gap-6 grid-cols-[repeat(auto-fit,minmax(250px,1fr))]">
+    <div class="p-6 rounded-2xl border border-line flex flex-col gap-2.5">
+      <h3 class="text-lg font-bold">Annonces vérifiées</h3>
+      <p class="text-[15px] text-muted leading-relaxed">Les propriétaires vérifiés sont signalés par un badge, et chaque annonce peut être signalée en un clic.</p>
+    </div>
+    <div class="p-6 rounded-2xl border border-line flex flex-col gap-2.5">
+      <h3 class="text-lg font-bold">Contact direct</h3>
+      <p class="text-[15px] text-muted leading-relaxed">Écris au propriétaire et demande une visite depuis le site, sans intermédiaire.</p>
+    </div>
+    <div class="p-6 rounded-2xl border border-line flex flex-col gap-2.5">
+      <h3 class="text-lg font-bold">Des filtres qui comptent</h3>
+      <p class="text-[15px] text-muted leading-relaxed">Distance à la fac, meublé, colocation, nombre de chambres : tu ne vois que ce qui te correspond.</p>
+    </div>
+  </div>
+</section>
+
+<section class="max-w-6xl mx-auto px-4 sm:px-6 pt-14">
+  <div class="rounded-3xl bg-ink text-white p-8 sm:p-12 flex flex-wrap items-center justify-between gap-6">
+    <div class="max-w-xl flex flex-col gap-2.5">
+      <h2 class="text-3xl font-extrabold tracking-tight">Vous avez un logement à louer ?</h2>
+      <p class="text-[#C9D3E0] leading-relaxed">Publiez votre annonce en quelques minutes et recevez des demandes de locataires sérieux.</p>
+    </div>
+    <a href="{{ url_for('listings.create') }}" class="px-6 py-4 rounded-xl bg-white text-ink font-bold">Publier une annonce</a>
+  </div>
+</section>
+{% endblock %}

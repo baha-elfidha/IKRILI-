@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% from "_macros.html" import photo_placeholder, verified_badge %}
+{% block title %}{{ listing.title }} – {{ listing.city }} – IKRILI{% endblock %}
+{% block meta_description %}{{ listing.title }} à {{ listing.city }} ({{ listing.governorate }}), {{ listing.price_tnd|tnd }} TND par mois.{% endblock %}
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 sm:px-6 py-6 flex flex-col gap-7">
+
+  <a href="{{ request.referrer if request.referrer and '/recherche' in request.referrer else url_for('main.search') }}" class="font-semibold text-brand text-[15px]">&larr; Retour aux résultats</a>
+
+  {% if not listing.is_active %}
+    <div class="px-4 py-3 rounded-xl bg-amber-50 text-amber-900 font-semibold">Cette annonce est masquée : elle n'apparaît plus dans les recherches.</div>
+  {% endif %}
+
+  {# Galerie #}
+  <div class="grid gap-2.5 grid-cols-1 md:grid-cols-2">
+    {% if listing.photos %}
+      <img src="{{ url_for('static', filename='uploads/' ~ listing.photos[0].filename) }}" alt="{{ listing.title }}" class="w-full h-[420px] object-cover rounded-2xl">
+      <div class="grid grid-cols-2 gap-2.5">
+        {% for p in listing.photos[1:5] %}
+          <img src="{{ url_for('static', filename='uploads/' ~ p.filename) }}" alt="Photo {{ loop.index + 1 }} du logement" class="w-full h-[205px] object-cover rounded-xl">
+        {% endfor %}
+      </div>
+    {% else %}
+      {{ photo_placeholder('Pas encore de photo', 'h-[300px]') }}
+    {% endif %}
+  </div>
+
+  <div class="flex flex-wrap gap-10 items-start">
+    <div class="flex-[999_1_520px] min-w-0 flex flex-col gap-7">
+      <div class="flex flex-col gap-2.5">
+        <div class="flex flex-wrap gap-2">
+          {% if listing.is_verified %}{{ verified_badge('Annonce vérifiée') }}{% endif %}
+          {% if listing.target == 'etudiants' %}<span class="px-2.5 py-1 rounded-full bg-brand-soft text-brand-dark text-xs font-bold">Idéal étudiants</span>{% endif %}
+          {% if listing.target == 'familles' %}<span class="px-2.5 py-1 rounded-full bg-brand-soft text-brand-dark text-xs font-bold">Idéal familles</span>{% endif %}
+          {% if listing.is_colocation %}<span class="px-2.5 py-1 rounded-full bg-brand-soft text-brand-dark text-xs font-bold">Colocation{% if listing.coloc_places %} · {{ listing.coloc_places }} place{{ 's' if listing.coloc_places > 1 }}{% endif %}{% if listing.girls_only %} · filles uniquement{% endif %}</span>{% endif %}
+        </div>
+        <h1 class="text-3xl sm:text-4xl font-extrabold leading-tight tracking-tight">{{ listing.title }}</h1>
+        <p class="text-muted">
+          {{ listing.city }}, {{ listing.governorate }}{% if listing.floor %} · {{ listing.floor }}{% endif %}
+          {% if listing.available_from %} · disponible dès le {{ listing.available_from.strftime('%d/%m/%Y') }}{% endif %}
+        </p>
+        {% if current_user.is_authenticated and current_user.id == listing.owner_id %}
+          <a href="{{ url_for('listings.edit', listing_id=listing.id) }}" class="self-start font-semibold text-brand">Modifier mon annonce</a>
+        {% endif %}
+      </div>
+
+      <div class="grid gap-3 grid-cols-[repeat(auto-fit,minmax(130px,1fr))]">
+        <div class="p-4 rounded-xl bg-slate-50"><div class="text-[13px] text-muted">Type</div><div class="text-lg font-extrabold">{{ listing.typology or listing.property_type|capitalize }}</div></div>
+        {% if listing.surface_m2 %}<div class="p-4 rounded-xl bg-slate-50"><div class="text-[13px] text-muted">Surface</div><div class="text-lg font-extrabold">{{ listing.surface_m2 }} m²</div></div>{% endif %}
+        <div class="p-4 rounded-xl bg-slate-50"><div class="text-[13px] text-muted">Chambres</div><div class="text-lg font-extrabold">{{ listing.rooms }}</div></div>
+        <div class="p-4 rounded-xl bg-slate-50"><div class="text-[13px] text-muted">Meublé</div><div class="text-lg font-extrabold">{{ 'Oui' if listing.furnished else 'Non' }}</div></div>
+      </div>
+
+      <section class="flex flex-col gap-2.5">
+        <h2 class="text-xl font-extrabold">Description</h2>
+        <p class="leading-relaxed text-slate-700 whitespace-pre-line">{{ listing.description }}</p>
+      </section>
+
+      {% if listing.amenities %}
+      <section class="flex flex-col gap-3">
+        <h2 class="text-xl font-extrabold">Équipements</h2>
+        <ul class="grid gap-3 grid-cols-[repeat(auto-fill,minmax(200px,1fr))]">
+          {% for a in listing.amenities %}
+            <li class="flex items-center gap-2.5"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1F5FA8" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>{{ a }}</li>
+          {% endfor %}
+        </ul>
+      </section>
+      {% endif %}
+
+      {% if nearby or listing.latitude %}
+      <section class="flex flex-col gap-3">
+        <h2 class="text-xl font-extrabold">À proximité</h2>
+        <div class="flex flex-wrap gap-5">
+          {% if nearby %}
+          <ul class="flex-[1_1_260px]">
+            {% for u, mins in nearby %}
+              <li class="flex justify-between gap-3 py-3 border-b border-line"><span>{{ u.name }}</span><span class="font-bold text-slate-700">≈ {{ mins }} min à pied</span></li>
+            {% endfor %}
+          </ul>
+          {% endif %}
+          {% if listing.latitude %}
+          <div id="map" class="flex-[1_1_260px] min-h-[240px] rounded-xl overflow-hidden" aria-label="Carte de l'emplacement approximatif"></div>
+          {% endif %}
+        </div>
+      </section>
+      {% endif %}
+    </div>
+
+    <aside class="flex-[1_1_320px] max-w-[400px] flex flex-col gap-4">
+      <div class="p-6 rounded-2xl border border-line shadow-[0_8px_30px_rgba(15,27,45,0.06)] flex flex-col gap-4">
+        <div class="flex justify-between items-start gap-3">
+          <span class="text-3xl font-extrabold">{{ listing.price_tnd|tnd }} <span class="text-[15px] font-medium text-muted">TND / mois</span></span>
+          <form method="post" action="{{ url_for('main.toggle_favorite', listing_id=listing.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" aria-pressed="{{ 'true' if is_fav else 'false' }}" aria-label="{{ 'Retirer des favoris' if is_fav else 'Ajouter aux favoris' }}"
+                    class="w-11 h-11 rounded-full border border-line flex items-center justify-center">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="{{ '#C2364B' if is_fav else 'none' }}" stroke="{{ '#C2364B' if is_fav else '#2D3748' }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>
+            </button>
+          </form>
+        </div>
+        {% if listing.charges_info %}<p class="text-sm text-muted">{{ listing.charges_info }}</p>{% endif %}
+
+        <div class="flex items-center gap-3 p-3.5 rounded-xl bg-slate-50">
+          <span class="w-11 h-11 rounded-full bg-[#C9D6E6] flex items-center justify-center font-extrabold text-brand-dark">{{ listing.owner.initials }}</span>
+          <div class="flex flex-col">
+            <span class="font-bold text-[15px]">{{ listing.owner.full_name }}</span>
+            {% if listing.owner.is_verified %}<span class="text-[13px] font-semibold text-ok">Identité vérifiée</span>{% else %}<span class="text-[13px] text-muted">Identité non vérifiée</span>{% endif %}
+          </div>
+        </div>
+
+        {% if current_user.is_authenticated %}
+          {% if current_user.id != listing.owner_id %}
+            <form method="post" action="{{ url_for('main.contact', listing_id=listing.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="kind" value="visite">
+              <button type="submit" class="w-full min-h-[52px] rounded-xl bg-brand hover:bg-brand-dark text-white font-bold">Demander une visite</button>
+            </form>
+            <form method="post" action="{{ url_for('main.contact', listing_id=listing.id) }}" class="flex flex-col gap-2">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="kind" value="message">
+              <label for="body" class="text-sm font-semibold">Envoyer un message</label>
+              <textarea id="body" name="body" rows="3" required class="px-3 py-2.5 rounded-lg border-[1.5px] border-[#D5DCE5]" placeholder="Bonjour, le logement est-il toujours disponible ?"></textarea>
+              <button type="submit" class="min-h-[48px] rounded-xl border-[1.5px] border-ink font-bold">Envoyer</button>
+            </form>
+            {% if listing.owner.phone %}
+              <details class="text-[15px]"><summary class="cursor-pointer font-semibold text-brand">Afficher le téléphone</summary><p class="pt-2 font-bold">{{ listing.owner.phone }}</p></details>
+            {% endif %}
+          {% endif %}
+        {% else %}
+          <a href="{{ url_for('auth.login', next=request.path) }}" class="w-full min-h-[52px] rounded-xl bg-brand hover:bg-brand-dark text-white font-bold flex items-center justify-center">Se connecter pour contacter</a>
+        {% endif %}
+      </div>
+
+      <div class="p-5 rounded-2xl border border-line flex flex-col gap-2">
+        <span class="font-bold text-[15px] text-warn">Conseil sécurité</span>
+        <span class="text-sm text-muted leading-relaxed">Ne verse jamais d'argent avant d'avoir visité le logement et signé un contrat.</span>
+        <a href="{{ url_for('main.report', listing_id=listing.id) }}" class="text-sm font-semibold text-warn">Signaler cette annonce</a>
+      </div>
+    </aside>
+  </div>
+</div>
+
+{% if listing.latitude %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  (function () {
+    var pos = [{{ listing.latitude }}, {{ listing.longitude }}];
+    var map = L.map('map', { scrollWheelZoom: false }).setView(pos, 15);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19, attribution: '&copy; OpenStreetMap'
+    }).addTo(map);
+    // Zone approximative (300 m) pour protéger l'adresse exacte du propriétaire
+    L.circle(pos, { radius: 300, color: '#1F5FA8', fillOpacity: 0.12 }).addTo(map);
+  })();
+</script>
+{% endif %}
+{% endblock %}

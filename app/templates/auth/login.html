@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Connexion – IKRILI{% endblock %}
+{% block content %}
+{% set input = "w-full px-3 py-3 rounded-lg border-[1.5px] border-[#D5DCE5] bg-white text-[15px] font-normal" %}
+<div class="max-w-md mx-auto px-4 sm:px-6 py-12 flex flex-col gap-6">
+  <h1 class="text-3xl font-extrabold tracking-tight">Connexion</h1>
+  <form method="post" class="flex flex-col gap-4">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label class="flex flex-col gap-1.5 font-semibold text-sm">E-mail
+      <input type="email" name="email" required autocomplete="email" class="{{ input }}">
+    </label>
+    <label class="flex flex-col gap-1.5 font-semibold text-sm">Mot de passe
+      <input type="password" name="password" required autocomplete="current-password" class="{{ input }}">
+    </label>
+    <label class="flex items-center gap-2.5 text-sm"><input type="checkbox" name="remember" value="1" class="w-[18px] h-[18px]"> Rester connecté</label>
+    <button type="submit" class="min-h-[52px] rounded-xl bg-brand hover:bg-brand-dark text-white font-bold">Se connecter</button>
+  </form>
+  <p class="text-sm text-muted">Pas encore de compte ? <a href="{{ url_for('auth.register') }}" class="text-brand font-semibold">Créer un compte</a></p>
+</div>
+{% endblock %}

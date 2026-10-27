@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Modifier' if editing else 'Publier' }} une annonce – IKRILI{% endblock %}
+{% block content %}
+{% set input = "w-full px-3 py-2.5 rounded-lg border-[1.5px] border-[#D5DCE5] bg-white text-[15px]" %}
+{% macro val(name, default='') -%}{{ form.get(name) if form.get(name) is not none else default }}{%- endmacro %}
+{% macro checked(name, current) -%}{% if form %}{% if form.get(name) %}checked{% endif %}{% elif current %}checked{% endif %}{%- endmacro %}
+
+<div class="max-w-3xl mx-auto px-4 sm:px-6 py-8 flex flex-col gap-6">
+  <h1 class="text-3xl font-extrabold tracking-tight">{{ 'Modifier mon annonce' if editing else 'Publier une annonce' }}</h1>
+
+  <form method="post" enctype="multipart/form-data" class="flex flex-col gap-8">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <fieldset class="flex flex-col gap-4">
+      <legend class="text-xl font-extrabold mb-3">Le logement</legend>
+      <label class="flex flex-col gap-1.5 font-semibold text-sm">Titre de l'annonce
+        <input name="title" required minlength="8" maxlength="140" value="{{ val('title', listing.title or '') }}" class="{{ input }}" placeholder="Ex. S+2 meublé près d'ESPRIT">
+      </label>
+      <div class="grid gap-4 grid-cols-1 sm:grid-cols-3">
+        <label class="flex flex-col gap-1.5 font-semibold text-sm">Type
+          <select name="property_type" required class="{{ input }}">
+            <option value="">Choisir…</option>
+            {% for v, l in property_types %}<option value="{{ v }}" {% if val('property_type', listing.property_type or '') == v %}selected{% endif %}>{{ l }}</option>{% endfor %}
+          </select>
+        </label>
+        <label class="flex flex-col gap-1.5 font-semibold text-sm">Typologie
+          <input name="typology" value="{{ val('typology', listing.typology or '') }}" class="{{ input }}" placeholder="S+1, S+2…">
+        </label>
+        <label class="flex flex-col gap-1.5 font-semibold text-sm">Chambres
+          <input type="number" min="1" name="rooms" value="{{ val('rooms', listing.rooms or 1) }}" class="{{ input }}">
+        </label>
+        <label class="flex flex-col gap-1.5 font-semibold text-sm">Surface (m²)
+          <input type="number" min="5" name="surface_m2" value="{{ val('surface_m2', listing.surface_m2 or '') }}" class="{{ input }}">
+        </label>
+        <label class="flex flex-col gap-1.5 font-semibold text-sm">Étage
+          <input name="floor" value="{{ val('floor', listing.floor or '') }}" class="{{ input }}" placeholder="2e étage">
+        </label>
+        <label class="flex flex-col gap-1.5 font-semibold text-sm">Disponible le
+          <input type="date" name="available_from" value="{{ val('available_from', listing.available_from.isoformat() if listing.available_from else '') }}" class="{{ input }}">
+        </label>
+      </div>
+      <label class="flex flex-col gap-1.5 font-semibold text-sm">Description
+        <textarea name="description" required minlength="30" rows="6" class="{{ input }} font-normal" placeholder="Pièces, état, quartier, conditions (caution, durée du contrat)…">{{ val('description', listing.description or '') }}</textarea>
+      </label>
+    </fieldset>
+
+    <fieldset class="flex flex-col gap-4">
+      <legend class="text-xl font-extrabold mb-3">Loyer</legend>
+      <div class="grid gap-4 grid-cols-1 sm:grid-cols-2">
+        <label class="flex flex-col gap-1.5 font-semibold text-sm">Loyer mensuel (TND)
+          <input type="number" min="1" name="price_tnd" required value="{{ val('price_tnd', listing.price_tnd or '') }}" class="{{ input }}">
+        </label>
+        <label class="flex flex-col gap-1.5 font-semibold text-sm">Charges
+          <input name="charges_info" value="{{ val('charges_info', listing.charges_info or '') }}" class="{{ input }}" placeholder="Ex. eau incluse, électricité en sus">
+        </label>
+      </div>
+    </fieldset>
+
+    <fieldset class="flex flex-col gap-4">
+      <legend class="text-xl font-extrabold mb-3">Emplacement</legend>
+      <div class="grid gap-4 grid-cols-1 sm:grid-cols-2">
+        <label class="flex flex-col gap-1.5 font-semibold text-sm">Gouvernorat
+          <select name="governorate" required class="{{ input }}">
+            <option value="">Choisir…</option>
+            {% for g in governorates %}<option value="{{ g }}" {% if val('governorate', listing.governorate or '') == g %}selected{% endif %}>{{ g }}</option>{% endfor %}
+          </select>
+        </label>
+        <label class="flex flex-col gap-1.5 font-semibold text-sm">Ville ou quartier
+          <input name="city" required value="{{ val('city', listing.city or '') }}" class="{{ input }}" placeholder="El Ghazela">
+        </label>
+      </div>
+      <p class="text-sm text-muted">Clique sur la carte pour placer le logement. Les locataires ne verront qu'une zone approximative, jamais l'adresse exacte.</p>
+      <div id="picker" class="h-[300px] rounded-xl overflow-hidden border border-line"></div>
+      <input type="hidden" name="latitude" id="lat" value="{{ val('latitude', listing.latitude or '') }}">
+      <input type="hidden" name="longitude" id="lng" value="{{ val('longitude', listing.longitude or '') }}">
+    </fieldset>
+
+    <fieldset class="flex flex-col gap-3">
+      <legend class="text-xl font-extrabold mb-3">Public et équipements</legend>
+      <label class="flex flex-col gap-1.5 font-semibold text-sm max-w-xs">Idéal pour
+        <select name="target" class="{{ input }}">
+          {% set t = val('target', listing.target or 'tous') %}
+          <option value="tous" {% if t == 'tous' %}selected{% endif %}>Tout le monde</option>
+          <option value="etudiants" {% if t == 'etudiants' %}selected{% endif %}>Étudiants</option>
+          <option value="familles" {% if t == 'familles' %}selected{% endif %}>Familles</option>
+        </select>
+      </label>
+      <label class="flex items-center gap-2.5"><input type="checkbox" name="furnished" value="1" {{ checked('furnished', listing.furnished) }} class="w-[18px] h-[18px]"> Meublé</label>
+      <label class="flex items-center gap-2.5"><input type="checkbox" name="is_colocation" value="1" {{ checked('is_colocation', listing.is_colocation) }} class="w-[18px] h-[18px]"> Colocation</label>
+      <div class="flex flex-wrap gap-4 pl-7">
+        <label class="flex items-center gap-2 text-sm">Places libres <input type="number" min="1" name="coloc_places" value="{{ val('coloc_places', listing.coloc_places or '') }}" class="w-20 px-2 py-1.5 rounded-lg border-[1.5px] border-[#D5DCE5]"></label>
+        <label class="flex items-center gap-2.5 text-sm"><input type="checkbox" name="girls_only" value="1" {{ checked('girls_only', listing.girls_only) }} class="w-[18px] h-[18px]"> Filles uniquement</label>
+      </div>
+      <div class="grid gap-3 grid-cols-1 sm:grid-cols-2 pt-2">
+        {% for field, label in amenities %}
+          <label class="flex items-center gap-2.5"><input type="checkbox" name="{{ field }}" value="1" {{ checked(field, listing[field]) }} class="w-[18px] h-[18px]"> {{ label }}</label>
+        {% endfor %}
+      </div>
+    </fieldset>
+
+    <fieldset class="flex flex-col gap-3">
+      <legend class="text-xl font-extrabold mb-3">Photos</legend>
+      {% if listing.photos %}
+        <div class="flex flex-wrap gap-2">
+          {% for p in listing.photos %}<img src="{{ url_for('static', filename='uploads/' ~ p.filename) }}" alt="" class="w-24 h-20 object-cover rounded-lg">{% endfor %}
+        </div>
+      {% endif %}
+      <label class="flex flex-col gap-1.5 font-semibold text-sm">Ajouter des photos (JPG, PNG ou WEBP, 10 maximum)
+        <input type="file" name="photos" multiple accept=".jpg,.jpeg,.png,.webp" class="text-sm font-normal">
+      </label>
+    </fieldset>
+
+    <button type="submit" class="self-start min-h-[52px] px-8 rounded-xl bg-brand hover:bg-brand-dark text-white font-bold">{{ 'Enregistrer' if editing else 'Publier mon annonce' }}</button>
+  </form>
+</div>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  (function () {
+    var lat = document.getElementById('lat'), lng = document.getElementById('lng');
+    var start = lat.value ? [parseFloat(lat.value), parseFloat(lng.value)] : [36.8065, 10.1815];
+    var map = L.map('picker').setView(start, lat.value ? 15 : 11);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(map);
+    var marker = lat.value ? L.marker(start).addTo(map) : null;
+    map.on('click', function (e) {
+      lat.value = e.latlng.lat.toFixed(6);
+      lng.value = e.latlng.lng.toFixed(6);
+      if (marker) { marker.setLatLng(e.latlng); } else { marker = L.marker(e.latlng).addTo(map); }
+    });
+  })();
+</script>
+{% endblock %}

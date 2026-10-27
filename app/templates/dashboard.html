@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Mon espace – IKRILI{% endblock %}
+{% block content %}
+{% set status_labels = {'nouveau': 'Nouveau', 'lu': 'Lu', 'accepte': 'Visite acceptée', 'refuse': 'Refusé'} %}
+<div class="max-w-6xl mx-auto px-4 sm:px-6 py-8 flex flex-col gap-10">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <h1 class="text-3xl font-extrabold tracking-tight">Bonjour {{ current_user.full_name.split()[0] }}</h1>
+    <a href="{{ url_for('listings.create') }}" class="px-5 py-3 rounded-xl bg-brand hover:bg-brand-dark text-white font-bold">Nouvelle annonce</a>
+  </div>
+
+  <section class="flex flex-col gap-4">
+    <h2 class="text-xl font-extrabold">Mes annonces ({{ my_listings|length }})</h2>
+    {% if my_listings %}
+      <div class="flex flex-col gap-3">
+        {% for l in my_listings %}
+          <div class="flex flex-wrap items-center justify-between gap-4 p-4 rounded-2xl border border-line">
+            <div class="flex flex-col gap-1 min-w-0">
+              <a href="{{ url_for('main.listing_detail', listing_id=l.id) }}" class="font-bold hover:text-brand">{{ l.title }}</a>
+              <span class="text-sm text-muted">{{ l.city }} · {{ l.price_tnd|tnd }} TND · {{ l.requests|length }} demande{{ 's' if l.requests|length != 1 }} · {{ l.favorited_by|length }} favori{{ 's' if l.favorited_by|length != 1 }}</span>
+            </div>
+            <div class="flex flex-wrap gap-2 items-center">
+              <span class="px-2.5 py-1 rounded-full text-xs font-bold {{ 'bg-okbg text-ok' if l.is_active else 'bg-slate-100 text-slate-700' }}">{{ 'En ligne' if l.is_active else 'Masquée' }}</span>
+              <a href="{{ url_for('listings.edit', listing_id=l.id) }}" class="px-3 py-2 rounded-lg border border-line font-semibold text-sm">Modifier</a>
+              <form method="post" action="{{ url_for('listings.toggle_active', listing_id=l.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="px-3 py-2 rounded-lg border border-line font-semibold text-sm">{{ 'Marquer comme louée' if l.is_active else 'Remettre en ligne' }}</button>
+              </form>
+              <form method="post" action="{{ url_for('listings.delete', listing_id=l.id) }}" onsubmit="return confirm('Supprimer définitivement cette annonce ?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="px-3 py-2 rounded-lg border border-red-200 text-red-700 font-semibold text-sm">Supprimer</button>
+              </form>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="text-muted">Tu n'as pas encore publié d'annonce.</p>
+    {% endif %}
+  </section>
+
+  <section class="flex flex-col gap-4">
+    <h2 class="text-xl font-extrabold">Demandes reçues</h2>
+    {% if received %}
+      {% for r in received %}
+        <div class="p-4 rounded-2xl border border-line flex flex-col gap-2">
+          <div class="flex flex-wrap justify-between gap-2 text-sm">
+            <span><strong>{{ r.sender.full_name }}</strong> · {{ 'Demande de visite' if r.kind == 'visite' else 'Message' }} pour <a class="text-brand font-semibold" href="{{ url_for('main.listing_detail', listing_id=r.listing.id) }}">{{ r.listing.title }}</a></span>
+            <span class="text-muted">{{ r.created_at.strftime('%d/%m/%Y %H:%M') }} · {{ status_labels.get(r.status, r.status) }}</span>
+          </div>
+          <p class="text-[15px] whitespace-pre-line">{{ r.body }}</p>
+          <p class="text-sm text-muted">Contact : {{ r.sender.email }}{% if r.sender.phone %} · {{ r.sender.phone }}{% endif %}</p>
+          {% if r.kind == 'visite' and r.status in ('nouveau', 'lu') %}
+          <div class="flex gap-2">
+            {% for action, label in [('accepte', 'Accepter la visite'), ('refuse', 'Refuser')] %}
+              <form method="post" action="{{ url_for('listings.answer_request', request_id=r.id, action=action) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="px-3 py-2 rounded-lg font-semibold text-sm {{ 'bg-brand text-white' if action == 'accepte' else 'border border-line' }}">{{ label }}</button>
+              </form>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+      {% endfor %}
+    {% else %}
+      <p class="text-muted">Aucune demande pour l'instant.</p>
+    {% endif %}
+  </section>
+
+  <section class="flex flex-col gap-4">
+    <h2 class="text-xl font-extrabold">Mes demandes envoyées</h2>
+    {% if sent %}
+      {% for r in sent %}
+        <div class="p-4 rounded-2xl border border-line flex flex-wrap justify-between gap-2 text-sm">
+          <span>{{ 'Visite' if r.kind == 'visite' else 'Message' }} · <a class="text-brand font-semibold" href="{{ url_for('main.listing_detail', listing_id=r.listing.id) }}">{{ r.listing.title }}</a></span>
+          <span class="text-muted">{{ r.created_at.strftime('%d/%m/%Y') }} · {{ status_labels.get(r.status, r.status) }}</span>
+        </div>
+      {% endfor %}
+    {% else %}
+      <p class="text-muted">Tu n'as encore contacté aucun propriétaire.</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}IKRILI – Logements à louer en Tunisie{% endblock %}</title>
+  <meta name="description" content="{% block meta_description %}Appartements, maisons et colocations à louer en Tunisie pour étudiants et familles. Annonces vérifiées.{% endblock %}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'] },
+          colors: {
+            brand: { DEFAULT: '#1F5FA8', dark: '#174A84', soft: '#EEF3F9', photo: '#DCE6F2' },
+            ink: '#0F1B2D', muted: '#4A5568', line: '#E4E8EE', ok: '#146C43', okbg: '#E6F4EC', warn: '#B4462B'
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-white text-ink font-sans antialiased min-h-screen flex flex-col">
+
+<header class="border-b border-line">
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex flex-wrap items-center justify-between gap-3">
+    <a href="{{ url_for('main.index') }}" class="flex items-center gap-2.5 no-underline text-ink">
+      <span class="w-9 h-9 rounded-lg bg-brand flex items-center justify-center">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg>
+      </span>
+      <span class="text-xl font-extrabold tracking-wider">IKRILI</span>
+    </a>
+    <nav aria-label="Navigation principale" class="flex flex-wrap items-center gap-1 text-[15px] font-semibold">
+      <a href="{{ url_for('main.search') }}" class="px-3 py-2.5 text-slate-700 hover:text-brand">Louer</a>
+      <a href="{{ url_for('main.search', coloc=1) }}" class="px-3 py-2.5 text-slate-700 hover:text-brand">Colocation</a>
+      {% if current_user.is_authenticated %}
+        <a href="{{ url_for('main.favorites') }}" class="px-3 py-2.5 text-slate-700 hover:text-brand">Favoris</a>
+        <a href="{{ url_for('listings.dashboard') }}" class="px-3 py-2.5 text-slate-700 hover:text-brand">Mon espace</a>
+        <a href="{{ url_for('auth.logout') }}" class="px-3 py-2.5 text-slate-700 hover:text-brand">Déconnexion</a>
+      {% else %}
+        <a href="{{ url_for('auth.login') }}" class="px-3 py-2.5 text-slate-700 hover:text-brand">Connexion</a>
+      {% endif %}
+      <a href="{{ url_for('listings.create') }}" class="ml-1 px-4 py-2.5 rounded-lg bg-ink text-white hover:bg-slate-800">Publier une annonce</a>
+    </nav>
+  </div>
+</header>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+  <div class="max-w-6xl mx-auto w-full px-4 sm:px-6 pt-4 space-y-2" role="status">
+    {% for category, message in messages %}
+      <div class="px-4 py-3 rounded-xl text-[15px] font-semibold
+        {% if category == 'error' %}bg-red-50 text-red-800{% elif category == 'success' %}bg-okbg text-ok{% else %}bg-brand-soft text-brand-dark{% endif %}">
+        {{ message }}
+      </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+{% endwith %}
+
+<main class="flex-1">
+  {% block content %}{% endblock %}
+</main>
+
+<footer class="border-t border-line mt-12">
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 py-7 flex flex-wrap justify-between gap-4 text-sm text-muted">
+    <span><strong class="text-ink tracking-wider">IKRILI</strong> · Location de logements en Tunisie</span>
+    <div class="flex flex-wrap gap-5">
+      <a href="{{ url_for('main.safety') }}" class="hover:text-brand">Conseils anti-arnaque</a>
+      <a href="mailto:contact@ikrili.tn" class="hover:text-brand">Contact</a>
+    </div>
+  </div>
+</footer>
+</body>
+</html>

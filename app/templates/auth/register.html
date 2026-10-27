@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Créer un compte – IKRILI{% endblock %}
+{% block content %}
+{% set input = "w-full px-3 py-3 rounded-lg border-[1.5px] border-[#D5DCE5] bg-white text-[15px] font-normal" %}
+<div class="max-w-md mx-auto px-4 sm:px-6 py-12 flex flex-col gap-6">
+  <h1 class="text-3xl font-extrabold tracking-tight">Créer un compte</h1>
+  <form method="post" class="flex flex-col gap-4">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <fieldset class="flex flex-col gap-2">
+      <legend class="font-semibold text-sm mb-2">Je suis</legend>
+      <div class="flex gap-3">
+        <label class="flex-1 flex items-center gap-2.5 p-3 rounded-xl border-[1.5px] border-[#D5DCE5]"><input type="radio" name="role" value="locataire" {% if form.get('role', 'locataire') == 'locataire' %}checked{% endif %} class="w-[18px] h-[18px]"> Je cherche un logement</label>
+        <label class="flex-1 flex items-center gap-2.5 p-3 rounded-xl border-[1.5px] border-[#D5DCE5]"><input type="radio" name="role" value="proprietaire" {% if form.get('role') == 'proprietaire' %}checked{% endif %} class="w-[18px] h-[18px]"> Je loue un logement</label>
+      </div>
+    </fieldset>
+    <label class="flex flex-col gap-1.5 font-semibold text-sm">Nom complet
+      <input name="full_name" required value="{{ form.get('full_name', '') }}" autocomplete="name" class="{{ input }}">
+    </label>
+    <label class="flex flex-col gap-1.5 font-semibold text-sm">E-mail
+      <input type="email" name="email" required value="{{ form.get('email', '') }}" autocomplete="email" class="{{ input }}">
+    </label>
+    <label class="flex flex-col gap-1.5 font-semibold text-sm">Téléphone (facultatif)
+      <input type="tel" name="phone" value="{{ form.get('phone', '') }}" autocomplete="tel" placeholder="+216 …" class="{{ input }}">
+    </label>
+    <label class="flex flex-col gap-1.5 font-semibold text-sm">Mot de passe (8 caractères minimum)
+      <input type="password" name="password" required minlength="8" autocomplete="new-password" class="{{ input }}">
+    </label>
+    <button type="submit" class="min-h-[52px] rounded-xl bg-brand hover:bg-brand-dark text-white font-bold">Créer mon compte</button>
+  </form>
+  <p class="text-sm text-muted">Déjà inscrit ? <a href="{{ url_for('auth.login') }}" class="text-brand font-semibold">Se connecter</a></p>
+</div>
+{% endblock %}

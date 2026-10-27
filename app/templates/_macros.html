@@ -1,0 +1,37 @@
+{% macro photo_placeholder(label='Photo du logement', h='h-48') %}
+<div class="{{ h }} w-full rounded-2xl bg-brand-photo flex flex-col items-center justify-center gap-1.5 text-[#3E5F86]">
+  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#5B7FA8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-9 8"/></svg>
+  <span class="text-xs font-semibold">{{ label }}</span>
+</div>
+{% endmacro %}
+
+{% macro verified_badge(text='Vérifiée') %}
+<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-okbg text-ok text-xs font-bold">
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>
+  {{ text }}
+</span>
+{% endmacro %}
+
+{% macro listing_card(l, distance=None, university=None) %}
+<a href="{{ url_for('main.listing_detail', listing_id=l.id) }}" class="group flex flex-col gap-3 no-underline text-ink">
+  <div class="relative">
+    {% if l.cover %}
+      <img src="{{ url_for('static', filename='uploads/' ~ l.cover.filename) }}" alt="{{ l.title }}" class="h-48 w-full object-cover rounded-2xl">
+    {% else %}
+      {{ photo_placeholder() }}
+    {% endif %}
+    {% if l.is_verified %}<span class="absolute top-3 left-3">{{ verified_badge() }}</span>{% endif %}
+  </div>
+  <div class="flex flex-col gap-1">
+    <span class="font-bold text-base group-hover:text-brand">{{ l.title }}</span>
+    <span class="text-sm text-muted">{{ l.city }}, {{ l.governorate }}</span>
+    {% if distance and university %}
+      <span class="text-sm font-semibold text-brand">{{ distance }} min à pied de {{ university.name }}</span>
+    {% endif %}
+    <div class="flex flex-wrap gap-1.5 mt-1">
+      {% for t in l.tags %}<span class="px-2 py-1 rounded-md bg-slate-100 text-xs font-semibold text-slate-700">{{ t }}</span>{% endfor %}
+    </div>
+    <span class="mt-1.5 text-lg font-extrabold">{{ l.price_tnd|tnd }} <span class="text-sm font-medium text-muted">TND / mois</span></span>
+  </div>
+</a>
+{% endmacro %}

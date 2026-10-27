@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% from "_macros.html" import listing_card %}
+{% block title %}Mes favoris – IKRILI{% endblock %}
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 sm:px-6 py-8 flex flex-col gap-6">
+  <h1 class="text-3xl font-extrabold tracking-tight">Mes favoris</h1>
+  {% if listings %}
+    <div class="grid gap-6 grid-cols-[repeat(auto-fill,minmax(250px,1fr))]">
+      {% for l in listings %}{{ listing_card(l) }}{% endfor %}
+    </div>
+  {% else %}
+    <p class="text-muted">Aucun favori pour l'instant. Clique sur le cœur d'une annonce pour la garder ici.</p>
+  {% endif %}
+</div>
+{% endblock %}
