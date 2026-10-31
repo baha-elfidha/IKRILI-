@@ -45,7 +45,7 @@ flask --app wsgi make-admin ton-email@exemple.com
 
 ### À savoir avant le lancement public
 
-- **Photos** : sur Render, le disque du service est effacé à chaque redéploiement. Les photos envoyées seront perdues. Avant d'ouvrir au public, stocke-les sur Cloudinary ou un bucket S3 (seule la fonction `save_image` dans `app/utils.py` est à adapter).
+- **Photos** : ajoute la variable `CLOUDINARY_URL` (compte gratuit sur cloudinary.com) dans Render → Environment. Sans elle, les photos sont stockées sur le disque du serveur et **effacées à chaque redéploiement**.
 - **Plan gratuit** : il met le site en veille après inactivité et la base gratuite est limitée dans le temps. Vérifie les conditions actuelles de Render et passe sur un plan payant pour la production.
 - **Tailwind via CDN** : pratique pour démarrer ; pour la production, compile Tailwind (CLI) pour un CSS plus léger.
 - **Coordonnées des universités** : elles sont approximatives dans `app/cli.py`, vérifie-les sur une carte.

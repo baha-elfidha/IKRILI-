@@ -52,7 +52,7 @@
         <article class="p-3 sm:p-4 rounded-3xl border border-line flex flex-col sm:flex-row gap-4">
           <a href="{{ url_for('main.listing_detail', listing_id=l.id) }}" class="shrink-0 sm:w-44">
             {% if l.cover %}
-              <img src="{{ url_for('static', filename='uploads/' ~ l.cover.filename) }}" alt="" class="w-full h-40 sm:h-28 object-cover rounded-2xl {{ 'grayscale opacity-60' if not l.is_active }}">
+              <img src="{{ l.cover.thumb }}" alt="" class="w-full h-40 sm:h-28 object-cover rounded-2xl {{ 'grayscale opacity-60' if not l.is_active }}">
             {% else %}{{ photo_placeholder('Aucune photo', 'h-40 sm:h-28') }}{% endif %}
           </a>
           <div class="flex-1 min-w-0 flex flex-col gap-2">
@@ -144,7 +144,7 @@
       {% for r in sent %}
         {% set st = status_labels.get(r.status, (r.status, 'bg-slate-100')) %}
         <a href="{{ url_for('main.listing_detail', listing_id=r.listing.id) }}" class="p-4 rounded-3xl border border-line flex items-center gap-4 hover:border-ink">
-          {% if r.listing.cover %}<img src="{{ url_for('static', filename='uploads/' ~ r.listing.cover.filename) }}" alt="" class="w-16 h-16 rounded-2xl object-cover shrink-0">
+          {% if r.listing.cover %}<img src="{{ r.listing.cover.thumb }}" alt="" class="w-16 h-16 rounded-2xl object-cover shrink-0">
           {% else %}<span class="w-16 h-16 rounded-2xl bg-brand-photo shrink-0"></span>{% endif %}
           <span class="flex-1 min-w-0 flex flex-col">
             <span class="font-bold truncate">{{ r.listing.title }}</span>

@@ -2,7 +2,7 @@ from flask import Blueprint, abort, current_app, flash, redirect, render_templat
 from flask_login import current_user, login_required
 
 from app import db
-from app.models import ContactRequest, Listing, Report, University
+from app.models import ContactRequest, Listing, Notification, Report, University, User, notify
 from app.utils import GOVERNORATES, PROPERTY_TYPES, approx_coords, haversine_km, walking_minutes
 
 bp = Blueprint("main", __name__)
@@ -113,7 +113,7 @@ def search():
             "id": l.id, "lat": pos[0], "lng": pos[1], "price": l.price_tnd,
             "title": l.title, "place": f"{l.city}, {l.governorate}",
             "url": url_for("main.listing_detail", listing_id=l.id),
-            "photo": url_for("static", filename="uploads/" + l.cover.filename) if l.cover else None,
+            "photo": l.cover.thumb if l.cover else None,
         })
     map_university = ({"lat": university.latitude, "lng": university.longitude, "name": university.name,
                        "minutes": args.get("minutes", default=30, type=int)} if university else None)
@@ -193,6 +193,9 @@ def contact(listing_id):
         flash("Écris un message avant d'envoyer.", "error")
     else:
         db.session.add(ContactRequest(listing_id=listing.id, sender_id=current_user.id, kind=kind, body=body))
+        notify(listing.owner_id, kind,
+               f"{current_user.full_name} " + ("demande une visite" if kind == "visite" else "t'a envoyé un message"),
+               f"« {listing.title} » : {body}", url_for("listings.dashboard", onglet="demandes"))
         db.session.commit()
         flash("Demande de visite envoyée au propriétaire." if kind == "visite"
               else "Message envoyé au propriétaire.", "success")
@@ -207,6 +210,14 @@ def toggle_favorite(listing_id):
         current_user.favorite_listings.remove(listing)
     else:
         current_user.favorite_listings.append(listing)
+        if listing.owner_id != current_user.id:
+            # Une seule notification non lue par annonce : on évite le spam si quelqu'un clique plusieurs fois
+            pending = Notification.query.filter_by(user_id=listing.owner_id, kind="favori", is_read=False,
+                                                   url=url_for("main.listing_detail", listing_id=listing.id)).first()
+            if not pending:
+                notify(listing.owner_id, "favori", "Ton annonce a été ajoutée en favori",
+                       f"« {listing.title} » intéresse un locataire.",
+                       url_for("main.listing_detail", listing_id=listing.id))
     db.session.commit()
     return redirect(request.referrer or url_for("main.listing_detail", listing_id=listing.id))
 
@@ -236,6 +247,10 @@ def report(listing_id):
             db.session.add(Report(listing_id=listing.id, reason=reason,
                                   details=request.form.get("details", "").strip(),
                                   reporter_id=current_user.id if current_user.is_authenticated else None))
+            for admin in User.query.filter_by(role="admin").all():
+                notify(admin.id, "signalement", "Annonce signalée : " + dict(REPORT_REASONS)[reason],
+                       f"« {listing.title} » – {listing.city}",
+                       url_for("main.listing_detail", listing_id=listing.id))
             db.session.commit()
             flash("Merci, ton signalement a été transmis à l'équipe IKRILI.", "success")
             return redirect(url_for("main.listing_detail", listing_id=listing.id))

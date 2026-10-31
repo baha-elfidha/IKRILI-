@@ -27,10 +27,12 @@ def create_app(config_class=Config):
     from app.auth import bp as auth_bp
     from app.main import bp as main_bp
     from app.listings import bp as listings_bp
+    from app.notifications import bp as notifications_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
     app.register_blueprint(listings_bp)
+    app.register_blueprint(notifications_bp)
 
     from app import cli
     cli.register(app)
@@ -42,7 +44,10 @@ def create_app(config_class=Config):
 
     @app.context_processor
     def inject_globals():
-        return {"now_year": date.today().year}
+        from flask_login import current_user
+        from app.notifications import unread_count
+        unread = unread_count(current_user) if current_user.is_authenticated else 0
+        return {"now_year": date.today().year, "unread_notifs": unread}
 
     with app.app_context():
         db.create_all()

@@ -4,7 +4,7 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required, login_user, logout_user
 
 from app import db
-from app.models import User
+from app.models import User, notify
 
 bp = Blueprint("auth", __name__)
 
@@ -46,6 +46,14 @@ def register():
             user = User(full_name=full_name, email=email, phone=phone, role=role)
             user.set_password(password)
             db.session.add(user)
+            db.session.flush()
+            if role == "proprietaire":
+                notify(user.id, "bienvenue", "Bienvenue sur IKRILI !",
+                       "Publie ta première annonce : c'est gratuit et ça prend 5 minutes.", url_for("listings.create"))
+            else:
+                notify(user.id, "bienvenue", "Bienvenue sur IKRILI !",
+                       "Choisis ta fac dans la recherche pour voir les logements à quelques minutes à pied.",
+                       url_for("main.search"))
             db.session.commit()
             login_user(user)
             flash("Bienvenue sur IKRILI !", "success")

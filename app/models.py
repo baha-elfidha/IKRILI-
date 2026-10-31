@@ -126,8 +126,23 @@ class Listing(db.Model):
 class Photo(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     listing_id = db.Column(db.Integer, db.ForeignKey("listing.id"), nullable=False)
-    filename = db.Column(db.String(255), nullable=False)
+    filename = db.Column(db.String(255), nullable=False)  # nom local ou "cld:<public_id>"
     position = db.Column(db.Integer, default=0)
+
+    @property
+    def url(self):
+        from app.utils import image_url
+        return image_url(self.filename, "large")
+
+    @property
+    def thumb(self):
+        from app.utils import image_url
+        return image_url(self.filename, "thumb")
+
+    @property
+    def abs_url(self):
+        from app.utils import image_url
+        return image_url(self.filename, "large", external=True)
 
 
 class ContactRequest(db.Model):
@@ -141,6 +156,39 @@ class ContactRequest(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     sender = db.relationship("User")
+
+
+class Notification(db.Model):
+    """Notification affichée dans le site (cloche du menu)."""
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
+    kind = db.Column(db.String(20), nullable=False)  # visite | message | accepte | refuse | favori | signalement | bienvenue
+    title = db.Column(db.String(160), nullable=False)
+    body = db.Column(db.String(300))
+    url = db.Column(db.String(300))  # pas de clé étrangère vers l'annonce : elle peut être supprimée
+    is_read = db.Column(db.Boolean, default=False, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    STYLES = {  # couleur de la pastille, icône (chemins SVG)
+        "visite": ("bg-brand-soft text-brand", '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/>'),
+        "message": ("bg-brand-soft text-brand", '<path d="M4 5h16v11H8l-4 4z"/><path d="M8 10h8"/>'),
+        "accepte": ("bg-okbg text-ok", '<path d="M5 12l5 5L20 7"/>'),
+        "refuse": ("bg-slate-100 text-slate-700", '<path d="M6 6l12 12M18 6L6 18"/>'),
+        "favori": ("bg-pop-soft text-[#C2364B]", '<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>'),
+        "signalement": ("bg-pop-soft text-warn", '<path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17v.5"/>'),
+        "bienvenue": ("bg-sun-soft text-ink", '<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/>'),
+    }
+
+    @property
+    def style(self):
+        return self.STYLES.get(self.kind, self.STYLES["message"])
+
+
+def notify(user_id, kind, title, body=None, url=None):
+    """Ajoute une notification à la session ; l'appelant fait le commit."""
+    if user_id:
+        db.session.add(Notification(user_id=user_id, kind=kind, title=title[:160],
+                                    body=(body[:297] + "…") if body and len(body) > 300 else body, url=url))
 
 
 class Report(db.Model):

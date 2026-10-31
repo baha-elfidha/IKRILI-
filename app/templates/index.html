@@ -60,7 +60,7 @@
       <a href="{{ url_for('main.listing_detail', listing_id=featured.id) }}" tabindex="-1"
          class="absolute inset-x-4 top-0 rounded-[28px] bg-white p-3 shadow-[0_30px_60px_-25px_rgba(14,21,48,0.45)] -rotate-[2deg] hover:rotate-0 transition-transform">
         {% if featured.cover %}
-          <img src="{{ url_for('static', filename='uploads/' ~ featured.cover.filename) }}" alt="" class="w-full h-[250px] object-cover rounded-[20px]">
+          <img src="{{ featured.cover.url }}" alt="" class="w-full h-[250px] object-cover rounded-[20px]">
         {% else %}
           {{ photo_placeholder('Photo du logement', 'h-[250px]') }}
         {% endif %}

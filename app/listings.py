@@ -1,12 +1,11 @@
-import os
 from datetime import datetime
 
-from flask import Blueprint, abort, current_app, flash, jsonify, redirect, render_template, request, url_for
+from flask import Blueprint, abort, flash, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
 from app import db
-from app.models import ContactRequest, Listing, Photo
-from app.utils import GOVERNORATES, PROPERTY_TYPES, save_image
+from app.models import ContactRequest, Listing, Photo, notify
+from app.utils import GOVERNORATES, PROPERTY_TYPES, delete_image, save_image
 
 bp = Blueprint("listings", __name__, url_prefix="/proprietaire")
 
@@ -57,13 +56,20 @@ def _fill_listing(listing, form):
 
 
 def _save_photos(listing):
-    start = len(listing.photos)
-    for i, f in enumerate(request.files.getlist("photos")):
-        if start + i >= MAX_PHOTOS:
+    """Enregistre les photos envoyées ; prévient l'utilisateur si certaines n'ont pas pu l'être."""
+    files = [f for f in request.files.getlist("photos") if f and f.filename]
+    failed = 0
+    for f in files:
+        if len(listing.photos) >= MAX_PHOTOS:
             break
         name = save_image(f)
         if name:
-            listing.photos.append(Photo(filename=name, position=start + i))
+            listing.photos.append(Photo(filename=name, position=len(listing.photos)))
+        else:
+            failed += 1
+    if failed:
+        flash(f"{failed} photo{'s' if failed > 1 else ''} n'{'ont' if failed > 1 else 'a'} pas pu être "
+              "enregistrée(s) (format JPG, PNG ou WEBP uniquement). Tu peux réessayer en modifiant l'annonce.", "error")
 
 
 def _owned_or_404(listing_id):
@@ -121,13 +127,12 @@ def edit(listing_id):
 def delete_photo(photo_id):
     photo = db.get_or_404(Photo, photo_id)
     listing = _owned_or_404(photo.listing_id)
-    path = os.path.join(current_app.config["UPLOAD_FOLDER"], photo.filename)
+    ref = photo.filename
     db.session.delete(photo)
     for i, p in enumerate(p for p in listing.photos if p.id != photo_id):
         p.position = i
     db.session.commit()
-    if os.path.exists(path):
-        os.remove(path)
+    delete_image(ref)
     if request.accept_mimetypes.best == "application/json" or request.headers.get("X-Requested-With"):
         return jsonify(ok=True)
     flash("Photo supprimée.", "success")
@@ -148,8 +153,11 @@ def toggle_active(listing_id):
 @login_required
 def delete(listing_id):
     listing = _owned_or_404(listing_id)
+    refs = [p.filename for p in listing.photos]
     db.session.delete(listing)
     db.session.commit()
+    for ref in refs:
+        delete_image(ref)
     flash("Annonce supprimée.", "success")
     return redirect(url_for("listings.dashboard"))
 
@@ -181,6 +189,17 @@ def answer_request(request_id, action):
     if req.listing.owner_id != current_user.id:
         abort(403)
     if action in ("accepte", "refuse", "lu"):
-        req.status = action
+        previous, req.status = req.status, action
+        if action in ("accepte", "refuse") and previous != action:
+            owner = req.listing.owner
+            if action == "accepte":
+                contact = owner.email + (f" · {owner.phone}" if owner.phone else "")
+                notify(req.sender_id, "accepte", "Ta demande de visite a été acceptée !",
+                       f"« {req.listing.title} » – contacte {owner.full_name} pour fixer l'heure : {contact}",
+                       url_for("main.listing_detail", listing_id=req.listing_id))
+            else:
+                notify(req.sender_id, "refuse", "Ta demande de visite n'a pas été retenue",
+                       f"« {req.listing.title} ». D'autres logements t'attendent sur IKRILI.",
+                       url_for("main.search"))
         db.session.commit()
     return redirect(url_for("listings.dashboard", onglet="demandes"))

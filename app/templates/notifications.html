@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Notifications – IKRILI{% endblock %}
+{% block content %}
+{% set unread_items = items|rejectattr('is_read')|list %}
+<div class="max-w-3xl mx-auto px-4 sm:px-6 py-8 flex flex-col gap-6">
+  <div class="flex flex-wrap items-end justify-between gap-4">
+    <div class="flex flex-col gap-1">
+      <span class="text-sm font-extrabold uppercase tracking-wider text-brand">Mon compte</span>
+      <h1 class="text-3xl sm:text-4xl font-extrabold">Notifications</h1>
+      <p class="text-muted">{% if unread_items %}{{ unread_items|length }} non lue{{ 's' if unread_items|length > 1 }}{% else %}Tout est à jour.{% endif %}</p>
+    </div>
+    {% if unread_items %}
+      <form method="post" action="{{ url_for('notifications.mark_all_read') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="min-h-[44px] px-4 rounded-full border-[1.5px] border-line font-semibold text-sm flex items-center gap-2 hover:border-ink">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12l5 5L18 6M12 17l1 1L22 9"/></svg>
+          Tout marquer comme lu
+        </button>
+      </form>
+    {% endif %}
+  </div>
+
+  {% if items %}
+    <ul class="flex flex-col gap-2">
+      {% for n in items %}
+        <li>
+          <a href="{{ url_for('notifications.open', notif_id=n.id) }}"
+             class="relative flex gap-4 p-4 rounded-3xl border transition-colors {{ 'border-brand/30 bg-brand-soft/60 hover:bg-brand-soft' if not n.is_read else 'border-line hover:border-ink' }}">
+            <span class="shrink-0 w-11 h-11 rounded-2xl {{ n.style[0] }} flex items-center justify-center">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ n.style[1]|safe }}</svg>
+            </span>
+            <span class="flex-1 min-w-0 flex flex-col gap-0.5">
+              <span class="flex items-start justify-between gap-3">
+                <span class="{{ 'font-extrabold' if not n.is_read else 'font-semibold' }}">{{ n.title }}</span>
+                <span class="shrink-0 text-xs text-muted pt-0.5">{{ time_ago(n.created_at) }}</span>
+              </span>
+              {% if n.body %}<span class="text-[15px] text-muted leading-relaxed line-clamp-2">{{ n.body }}</span>{% endif %}
+            </span>
+            {% if not n.is_read %}<span class="absolute right-4 bottom-4 w-2.5 h-2.5 rounded-full bg-pop"><span class="sr-only">Non lue</span></span>{% endif %}
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <div class="p-10 rounded-3xl bg-slate-50 flex flex-col items-center text-center gap-3">
+      <span class="w-14 h-14 rounded-2xl bg-white flex items-center justify-center text-muted">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+      </span>
+      <p class="font-bold text-lg">Aucune notification pour l'instant</p>
+      <p class="text-muted max-w-sm">Tu seras prévenu ici quand un propriétaire répondra à ta demande ou quand un locataire s'intéressera à ton annonce.</p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

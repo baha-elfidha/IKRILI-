@@ -29,7 +29,7 @@
 <a href="{{ url_for('main.listing_detail', listing_id=l.id) }}" class="group flex flex-col gap-3 no-underline text-ink">
   <div class="relative">
     {% if l.cover %}
-      <img src="{{ url_for('static', filename='uploads/' ~ l.cover.filename) }}" alt="{{ l.title }}" class="h-48 w-full object-cover rounded-2xl">
+      <img src="{{ l.cover.thumb }}" alt="{{ l.title }}" class="h-48 w-full object-cover rounded-2xl">
     {% else %}
       {{ photo_placeholder() }}
     {% endif %}

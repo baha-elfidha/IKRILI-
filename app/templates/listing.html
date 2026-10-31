@@ -6,7 +6,7 @@
   {% if approx %}<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">{% endif %}
   <meta property="og:title" content="{{ listing.title }} – {{ listing.price_tnd|tnd }} TND/mois">
   <meta property="og:description" content="{{ listing.city }}, {{ listing.governorate }} · sur IKRILI">
-  {% if listing.cover %}<meta property="og:image" content="{{ url_for('static', filename='uploads/' ~ listing.cover.filename, _external=True) }}">{% endif %}
+  {% if listing.cover %}<meta property="og:image" content="{{ listing.cover.abs_url }}">{% endif %}
 {% endblock %}
 {% block content %}
 {% set photos = listing.photos %}
@@ -48,7 +48,7 @@
       <div id="carousel" class="flex overflow-x-auto snap-x snap-mandatory no-scrollbar" aria-label="Photos du logement">
         {% for p in photos %}
           <button type="button" data-open-photo="{{ loop.index0 }}" class="snap-center shrink-0 w-full" aria-label="Agrandir la photo {{ loop.index }} sur {{ n }}">
-            <img src="{{ url_for('static', filename='uploads/' ~ p.filename) }}" alt="" class="w-full h-[280px] object-cover" {% if not loop.first %}loading="lazy"{% endif %}>
+            <img src="{{ p.url }}" alt="" class="w-full h-[280px] object-cover" {% if not loop.first %}loading="lazy"{% endif %}>
           </button>
         {% endfor %}
       </div>
@@ -60,7 +60,7 @@
       {% for p in photos[:5] %}
         <button type="button" data-open-photo="{{ loop.index0 }}" aria-label="Agrandir la photo {{ loop.index }} sur {{ n }}"
                 class="relative group overflow-hidden {% if loop.first and n >= 3 %}col-span-2 row-span-2{% elif n == 3 %}col-span-2{% endif %}">
-          <img src="{{ url_for('static', filename='uploads/' ~ p.filename) }}" alt="" class="w-full h-full object-cover transition duration-300 group-hover:scale-[1.03] group-hover:brightness-95">
+          <img src="{{ p.url }}" alt="" class="w-full h-full object-cover transition duration-300 group-hover:scale-[1.03] group-hover:brightness-95">
         </button>
       {% endfor %}
       {% if n > 1 %}
@@ -234,7 +234,7 @@
   <div id="lb-thumbs" class="h-24 shrink-0 px-4 py-3 flex gap-2 overflow-x-auto no-scrollbar justify-start sm:justify-center">
     {% for p in photos %}
       <button type="button" data-thumb="{{ loop.index0 }}" class="shrink-0 w-20 h-full rounded-md overflow-hidden opacity-50 hover:opacity-100 ring-white" aria-label="Photo {{ loop.index }}">
-        <img src="{{ url_for('static', filename='uploads/' ~ p.filename) }}" alt="" class="w-full h-full object-cover" loading="lazy">
+        <img src="{{ p.thumb }}" alt="" class="w-full h-full object-cover" loading="lazy">
       </button>
     {% endfor %}
   </div>
@@ -272,7 +272,7 @@
   /* ---------- Visionneuse ---------- */
   var lb = document.getElementById('lightbox');
   if (!lb) return;
-  var srcs = [{% for p in listing.photos %}{{ url_for('static', filename='uploads/' ~ p.filename)|tojson }}{{ ',' if not loop.last }}{% endfor %}];
+  var srcs = [{% for p in listing.photos %}{{ p.url|tojson }}{{ ',' if not loop.last }}{% endfor %}];
   var img = document.getElementById('lb-img'), cnt = document.getElementById('lb-count');
   var thumbs = lb.querySelectorAll('[data-thumb]'), cur = 0, lastFocus = null;
 

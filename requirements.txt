@@ -5,3 +5,4 @@ Flask-WTF>=1.2,<2
 python-dotenv>=1.0
 psycopg2-binary>=2.9
 gunicorn>=22.0
+cloudinary>=1.40,<2
