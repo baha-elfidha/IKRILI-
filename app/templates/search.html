@@ -13,6 +13,21 @@
   .leaflet-popup-content-wrapper { padding: 0; overflow: hidden; border-radius: 14px; }
 </style>{% endblock %}
 {% block content %}
+{% macro alert_button(style='toolbar') -%}
+  {% if current_user.is_authenticated %}
+    <form method="post" action="{{ url_for('alerts.create') }}" class="{{ 'contents' if style == 'toolbar' else '' }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="qs" value="{{ request.query_string.decode() }}">
+      <button class="{{ alert_cls[style] }}">{{ alert_icon }}{{ alert_label[style] }}</button>
+    </form>
+  {% else %}
+    <a href="{{ url_for('auth.login', next=request.full_path) }}" class="{{ alert_cls[style] }}">{{ alert_icon }}{{ alert_label[style] }}</a>
+  {% endif %}
+{%- endmacro %}
+{% set alert_icon %}<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>{% endset %}
+{% set alert_cls = {'toolbar': 'min-h-[44px] px-4 rounded-full bg-sun hover:bg-[#F5C518] text-ink font-bold text-sm flex items-center gap-2',
+                    'empty': 'min-h-[44px] px-5 rounded-full bg-sun hover:bg-[#F5C518] text-ink font-bold flex items-center gap-2'} %}
+{% set alert_label = {'toolbar': 'Créer une alerte', 'empty': 'Préviens-moi dès qu\'une annonce correspond'} %}
 {% set input = "w-full px-3 py-2.5 rounded-lg border-[1.5px] border-[#D9DDEA] bg-white text-[15px]" %}
 {% set legend = "text-[13px] font-bold uppercase tracking-wider text-muted" %}
 
@@ -31,6 +46,7 @@
             {% if university %}<option value="proche" {% if args.get('tri') == 'proche' %}selected{% endif %}>Plus proches</option>{% endif %}
           </select>
         </label>
+        {% if active_filters %}{{ alert_button() }}{% endif %}
         <button type="button" data-open-filters aria-controls="filters-panel" aria-expanded="false"
                 class="min-h-[44px] px-4 rounded-full border-[1.5px] border-[#D9DDEA] bg-white font-semibold text-sm flex items-center gap-2 hover:border-ink">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
@@ -66,7 +82,10 @@
       <div class="p-8 rounded-2xl bg-slate-50 flex flex-col gap-3 items-start">
         <p class="font-bold text-lg">Aucun logement ne correspond à ces critères.</p>
         <p class="text-muted">Essaie d'élargir ton budget, la distance ou de retirer un filtre.</p>
-        <a href="{{ url_for('main.search') }}" class="px-4 py-2.5 rounded-xl bg-ink text-white font-semibold">Voir toutes les annonces</a>
+        <div class="flex flex-wrap gap-2">
+          {% if active_filters %}{{ alert_button('empty') }}{% endif %}
+          <a href="{{ url_for('main.search') }}" class="min-h-[44px] px-5 rounded-full bg-ink text-white font-semibold flex items-center">Voir toutes les annonces</a>
+        </div>
       </div>
     {% endif %}
 

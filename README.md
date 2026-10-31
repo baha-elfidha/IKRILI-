@@ -13,6 +13,10 @@ Stack : **Flask · PostgreSQL · SQLAlchemy · Tailwind (CDN) · Leaflet / OpenS
 - Fiche annonce : galerie, équipements, universités proches, carte avec zone approximative (l'adresse exacte n'est jamais affichée).
 - Demande de visite et messages au propriétaire ; espace propriétaire pour accepter ou refuser les visites.
 - Favoris, signalement d'annonces suspectes, page de conseils anti-arnaque.
+- Messagerie : un fil de discussion par annonce entre locataire et propriétaire, mis à jour automatiquement.
+- Alertes de recherche : notification (et e-mail) dès qu'une nouvelle annonce correspond à une recherche enregistrée.
+- Rendez-vous de visite : le propriétaire propose des créneaux, le locataire en réserve un en un clic.
+- Avis après visite : note du logement et du propriétaire, commentaire, réponse du propriétaire.
 - Mot de passe oublié (lien par e-mail, valable 1 h, à usage unique) et vérification de l'adresse e-mail.
 - Espace administrateur (`/admin`) : signalements, masquage d'annonces, blocage de comptes, badge « vérifié ».
 - Anti-abus : limites de tentatives de connexion, d'inscriptions, de messages et de signalements ; téléphone des propriétaires visible seulement pour les comptes de plus de 24 h.

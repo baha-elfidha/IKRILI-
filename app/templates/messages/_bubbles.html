@@ -1,0 +1,18 @@
+{% for m in msgs %}
+  {% if m.kind == 'systeme' or not m.sender_id %}
+    <li class="self-center max-w-[90%] px-4 py-2 rounded-full bg-slate-100 text-[13px] text-slate-700 text-center" data-msg="{{ m.id }}">
+      {{ m.body }} <span class="text-muted">· {{ m.created_at.strftime('%d/%m %H:%M') }}</span>
+    </li>
+  {% else %}
+    {% set mine = current_user.is_authenticated and m.sender_id == current_user.id %}
+    <li class="flex flex-col {{ 'items-end' if mine else 'items-start' }} gap-1" data-msg="{{ m.id }}">
+      {% if m.kind == 'visite' %}
+        <span class="text-[11px] font-extrabold uppercase tracking-wider text-brand">Demande de visite</span>
+      {% endif %}
+      <div class="max-w-[85%] sm:max-w-[70%] px-4 py-2.5 text-[15px] leading-relaxed whitespace-pre-line break-words
+                  {{ 'bg-brand text-white rounded-[22px_22px_6px_22px]' if mine else 'bg-slate-100 text-ink rounded-[22px_22px_22px_6px]' }}
+                  {{ 'ring-2 ring-sun' if m.kind == 'visite' }}">{{ m.body }}</div>
+      <span class="text-[11px] text-muted px-1">{{ m.created_at.strftime('%d/%m · %H:%M') }}</span>
+    </li>
+  {% endif %}
+{% endfor %}

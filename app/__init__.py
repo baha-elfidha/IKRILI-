@@ -32,12 +32,18 @@ def create_app(config_class=Config):
     from app.listings import bp as listings_bp
     from app.notifications import bp as notifications_bp
     from app.admin import bp as admin_bp
+    from app.messages import bp as messages_bp
+    from app.alerts import bp as alerts_bp
+    from app.visits import bp as visits_bp
+    from app.reviews import bp as reviews_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
     app.register_blueprint(listings_bp)
     app.register_blueprint(notifications_bp)
     app.register_blueprint(admin_bp)
+    for extra in (messages_bp, alerts_bp, visits_bp, reviews_bp):
+        app.register_blueprint(extra)
 
     from app import cli
     cli.register(app)
@@ -50,10 +56,16 @@ def create_app(config_class=Config):
     @app.context_processor
     def inject_globals():
         from flask_login import current_user
-        from app.notifications import unread_count
+        from app.models import unread_messages_count
+        from app.notifications import time_ago, unread_count
+        from app.reviews import can_review
         from app.security import can_see_phone, needs_email_verification
-        unread = unread_count(current_user) if current_user.is_authenticated else 0
+        from app.utils import format_slot
+        auth = current_user.is_authenticated
+        unread = unread_count(current_user) if auth else 0
         return {"now_year": date.today().year, "unread_notifs": unread,
+                "unread_msgs": unread_messages_count(current_user) if auth else 0,
+                "time_ago": time_ago, "format_slot": format_slot, "can_review": can_review,
                 "needs_verification": current_user.is_authenticated and needs_email_verification(current_user),
                 "can_see_phone": can_see_phone}
 
@@ -78,6 +90,8 @@ def create_app(config_class=Config):
         db.create_all()
         from app.migrate import ensure_schema
         ensure_schema(db)
+        from app.migrate import backfill_conversations
+        backfill_conversations(db)
         # Ferme les connexions ouvertes au démarrage : chaque worker gunicorn
         # doit ouvrir les siennes (sinon erreur SSL "bad record mac")
         db.engine.dispose()

@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}Conversation avec {{ other.full_name }} – IKRILI{% endblock %}
+{% block content %}
+{% set l = conv.listing %}
+<div class="max-w-3xl mx-auto px-4 sm:px-6 pt-4 pb-2 flex flex-col gap-3 min-h-[calc(100vh-64px)]">
+  <div class="flex items-center gap-2">
+    <a href="{{ url_for('messages.inbox') }}" class="w-11 h-11 -ml-2 rounded-full flex items-center justify-center hover:bg-slate-100" aria-label="Retour aux messages">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+    </a>
+    <span class="w-10 h-10 rounded-full bg-brand-soft text-brand-dark font-extrabold flex items-center justify-center shrink-0 text-sm">{{ other.initials }}</span>
+    <div class="flex-1 min-w-0 flex flex-col">
+      <h1 class="text-lg font-extrabold leading-tight truncate">{{ other.full_name }}</h1>
+      <span class="text-xs text-muted">{{ 'Propriétaire' if other.id == conv.owner_id else 'Locataire' }}{% if other.is_verified %} · <span class="text-ok font-semibold">identité vérifiée</span>{% endif %}</span>
+    </div>
+  </div>
+
+  {# Annonce concernée #}
+  <a href="{{ url_for('main.listing_detail', listing_id=l.id) }}" class="flex items-center gap-3 p-2.5 rounded-2xl border border-line hover:border-ink">
+    {% if l.cover %}<img src="{{ l.cover.thumb }}" alt="" class="w-14 h-12 rounded-xl object-cover shrink-0">{% else %}<span class="w-14 h-12 rounded-xl bg-brand-photo shrink-0"></span>{% endif %}
+    <span class="flex-1 min-w-0 flex flex-col">
+      <span class="font-bold text-sm truncate">{{ l.title }}</span>
+      <span class="text-xs text-muted">{{ l.city }} · <strong class="text-ink">{{ l.price_tnd|tnd }} TND</strong> / mois{% if not l.is_active %} · <span class="text-warn font-semibold">plus disponible</span>{% endif %}</span>
+    </span>
+  </a>
+
+  {# Visites #}
+  {% for s in booked %}
+    <div class="p-3.5 rounded-2xl bg-okbg text-ok flex items-center gap-3 text-[15px] font-semibold">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>
+      Visite prévue {{ format_slot(s.start_at) }}
+    </div>
+  {% endfor %}
+  {% if is_owner %}
+    {% for req in pending %}
+      <div class="p-4 rounded-2xl bg-sun-soft flex flex-col gap-3">
+        <span class="text-[15px]"><strong>{{ other.full_name }}</strong> demande une visite de ce logement.</span>
+        <div class="flex flex-wrap gap-2">
+          {% for action, label, style in [('accepte', 'Accepter la visite', 'bg-brand text-white'), ('refuse', 'Refuser', 'border-[1.5px] border-ink')] %}
+            <form method="post" action="{{ url_for('listings.answer_request', request_id=req.id, action=action) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="next" value="{{ url_for('messages.thread', conv_id=conv.id) }}">
+              <button class="min-h-[40px] px-4 rounded-full font-bold text-sm {{ style }}">{{ label }}</button>
+            </form>
+          {% endfor %}
+          {% if not l.future_slots() %}
+            <a href="{{ url_for('visits.manage', listing_id=l.id) }}" class="min-h-[40px] px-4 rounded-full font-bold text-sm text-brand flex items-center">Proposer des créneaux</a>
+          {% endif %}
+        </div>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  {# Messages #}
+  <ol id="thread" class="flex-1 flex flex-col gap-3 py-3" aria-live="polite" aria-label="Messages">
+    {% include "messages/_bubbles.html" %}
+  </ol>
+  <div id="bas"></div>
+
+  {% if member %}
+    {% if needs_verification %}
+      <div class="sticky bottom-0 py-3 bg-white"><div class="p-4 rounded-2xl bg-sun-soft text-[15px]"><a href="{{ url_for('auth.verify_pending') }}" class="font-bold underline">Confirme ton e-mail</a> pour répondre.</div></div>
+    {% else %}
+      <form id="composer" method="post" class="sticky bottom-0 bg-white/95 backdrop-blur py-3 flex items-end gap-2 border-t border-line -mx-4 px-4 sm:mx-0 sm:px-0">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label for="body" class="sr-only">Ton message</label>
+        <textarea id="body" name="body" rows="1" required maxlength="2000" placeholder="Écris ton message…"
+                  class="flex-1 max-h-40 px-4 py-3 rounded-3xl border-[1.5px] border-[#D9DDEA] bg-white text-[15px] resize-none focus:border-brand outline-none"></textarea>
+        <button type="submit" class="shrink-0 w-12 h-12 rounded-full bg-brand hover:bg-brand-dark text-white flex items-center justify-center" aria-label="Envoyer">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </button>
+      </form>
+    {% endif %}
+  {% endif %}
+</div>
+{% endblock %}
+{% block footer %}{% endblock %}
+
+{% block scripts %}
+{% if member %}
+<script>
+(function () {
+  var list = document.getElementById('thread'), lastId = {{ last_id }};
+  var form = document.getElementById('composer'), box = document.getElementById('body');
+  function bottom() { window.scrollTo(0, document.body.scrollHeight); }
+  bottom();
+  function poll() {
+    fetch('{{ url_for('messages.new_messages', conv_id=conv.id) }}?apres=' + lastId, { headers: { Accept: 'application/json' } })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (!d || d.last_id === lastId) return;
+        list.insertAdjacentHTML('beforeend', d.html); lastId = d.last_id; bottom();
+      }).catch(function () {});
+  }
+  setInterval(function () { if (!document.hidden) poll(); }, 8000);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) poll(); });
+  if (!form) return;
+  // La zone de texte grandit avec le message ; Entrée envoie, Maj + Entrée passe à la ligne
+  box.addEventListener('input', function () { box.style.height = 'auto'; box.style.height = Math.min(box.scrollHeight, 160) + 'px'; });
+  box.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && !e.shiftKey && window.matchMedia('(pointer: fine)').matches) { e.preventDefault(); form.requestSubmit(); }
+  });
+  form.addEventListener('submit', function (e) {
+    if (!box.value.trim()) { e.preventDefault(); return; }
+    e.preventDefault();
+    var data = new FormData(form), btn = form.querySelector('button');
+    btn.disabled = true;
+    fetch(form.action || location.pathname, { method: 'POST', body: data, headers: { 'X-Requested-With': 'fetch' } })
+      .then(function (r) {
+        if (r.ok && (r.headers.get('content-type') || '').indexOf('json') >= 0) { box.value = ''; box.style.height = 'auto'; poll(); }
+        else { form.submit(); }  // limite atteinte, etc. : on laisse la page afficher le message
+      })
+      .catch(function () { form.submit(); })
+      .finally(function () { btn.disabled = false; box.focus(); });
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}

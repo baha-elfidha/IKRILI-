@@ -1,0 +1,12 @@
+Nouvelle annonce pour ton alerte ({{ alert.label }}) :
+
+{{ listing.title }}
+{{ listing.city }}, {{ listing.governorate }}{{ extra }}
+{{ listing.price_tnd|tnd }} TND / mois
+
+Voir l'annonce : {{ link }}
+
+Les bons logements partent vite : contacte le propriétaire rapidement.
+Gérer mes alertes : {{ manage }}
+
+— L'équipe IKRILI

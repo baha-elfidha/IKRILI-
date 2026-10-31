@@ -44,6 +44,23 @@ def approx_coords(listing):
     return round(listing.latitude + dlat, 5), round(listing.longitude + dlng, 5)
 
 
+def now_tn():
+    """Heure actuelle en Tunisie (UTC+1, pas de changement d'heure), sans fuseau."""
+    from datetime import datetime, timedelta
+    return datetime.utcnow() + timedelta(hours=1)
+
+
+JOURS = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
+MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre",
+        "novembre", "décembre"]
+
+
+def format_slot(dt):
+    """« samedi 7 novembre à 10 h 30 »"""
+    h = f"{dt.hour} h" + (f" {dt.minute:02d}" if dt.minute else "")
+    return f"{JOURS[dt.weekday()]} {dt.day} {MOIS[dt.month - 1]} à {h}"
+
+
 def walking_minutes(km):
     # ~5 km/h, majoré de 20 % car les rues ne sont pas en ligne droite
     return max(1, round(km * 1.2 / 5 * 60))

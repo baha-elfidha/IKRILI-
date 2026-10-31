@@ -15,6 +15,7 @@ NEW_COLUMNS = {
         ("blocked_reason", "VARCHAR(200)", None),
     ],
     "listing": [("admin_hidden", "VARCHAR(20)", None)],
+    "contact_request": [("slot_id", "INTEGER", None)],
     "report": [("status", "VARCHAR(20)", "'nouveau'"), ("handled_at", "TIMESTAMP", None)],
 }
 
@@ -35,3 +36,28 @@ def ensure_schema(db):
                 if default is not None:
                     ddl += f" DEFAULT {default}"
                 conn.execute(text(ddl))
+
+
+def backfill_conversations(db):
+    """Une seule fois : transforme les anciens messages (demandes de contact) en conversations."""
+    from app.models import ContactRequest, Conversation, Message
+    if Conversation.query.first() or not ContactRequest.query.first():
+        return
+    convs = {}
+    for req in ContactRequest.query.order_by(ContactRequest.created_at).all():
+        listing = req.listing
+        if listing is None or req.sender_id == listing.owner_id:
+            continue
+        key = (listing.id, req.sender_id)
+        conv = convs.get(key)
+        if conv is None:
+            conv = Conversation(listing_id=listing.id, tenant_id=req.sender_id, owner_id=listing.owner_id,
+                                created_at=req.created_at, updated_at=req.created_at, tenant_read_at=req.created_at,
+                                owner_read_at=req.created_at if req.status != "nouveau" else None)
+            db.session.add(conv)
+            db.session.flush()
+            convs[key] = conv
+        db.session.add(Message(conversation_id=conv.id, sender_id=req.sender_id, body=req.body, created_at=req.created_at,
+                               kind="visite" if req.kind == "visite" else "texte"))
+        conv.updated_at = max(conv.updated_at, req.created_at)
+    db.session.commit()

@@ -59,7 +59,7 @@
       <a href="{{ url_for('main.search') }}" class="{{ navlink }}">Louer</a>
       <a href="{{ url_for('main.search', coloc=1) }}" class="{{ navlink }}">Colocation</a>
       {% if current_user.is_authenticated %}
-        <a href="{{ url_for('main.favorites') }}" class="{{ navlink }}">Favoris</a>
+        <a href="{{ url_for('messages.inbox') }}" class="{{ navlink }} flex items-center gap-1.5">Messages{% if unread_msgs %}<span class="min-w-[20px] h-5 px-1 rounded-full bg-pop text-ink text-[11px] font-extrabold flex items-center justify-center" aria-label="{{ unread_msgs }} non lu{{ 's' if unread_msgs > 1 }}">{{ unread_msgs }}</span>{% endif %}</a>
         <a href="{{ url_for('listings.dashboard') }}" class="{{ navlink }}">Mon espace</a>
         {% if current_user.is_admin %}<a href="{{ url_for('admin.index') }}" class="{{ navlink }}">Admin</a>{% endif %}
         <a href="{{ url_for('auth.logout') }}" class="{{ navlink }}">Déconnexion</a>
@@ -90,6 +90,9 @@
       <a href="{{ url_for('main.search', coloc=1) }}" class="{{ mlink }}">Colocation</a>
       {% if current_user.is_authenticated %}
         <a href="{{ url_for('notifications.index') }}" class="{{ mlink }} flex items-center justify-between">Notifications{% if unread_notifs %}<span class="min-w-[24px] h-6 px-1.5 rounded-full bg-pop text-ink text-xs font-extrabold flex items-center justify-center">{{ unread_notifs }}</span>{% endif %}</a>
+        <a href="{{ url_for('messages.inbox') }}" class="{{ mlink }} flex items-center justify-between">Messages{% if unread_msgs %}<span class="min-w-[24px] h-6 px-1.5 rounded-full bg-pop text-ink text-xs font-extrabold flex items-center justify-center">{{ unread_msgs }}</span>{% endif %}</a>
+        <a href="{{ url_for('visits.mine') }}" class="{{ mlink }}">Mes visites</a>
+        <a href="{{ url_for('alerts.index') }}" class="{{ mlink }}">Mes alertes</a>
         <a href="{{ url_for('main.favorites') }}" class="{{ mlink }}">Mes favoris</a>
         <a href="{{ url_for('listings.dashboard') }}" class="{{ mlink }}">Mon espace</a>
         {% if current_user.is_admin %}<a href="{{ url_for('admin.index') }}" class="{{ mlink }}">Administration</a>{% endif %}

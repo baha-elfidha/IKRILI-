@@ -41,6 +41,14 @@ class User(UserMixin, db.Model):
         return "".join(p[0] for p in parts[:2]).upper()
 
     @property
+    def owner_rating(self):
+        """Note moyenne reçue en tant que propriétaire : (moyenne, nombre) ou (None, 0)."""
+        rows = Review.query.filter_by(owner_id=self.id).with_entities(Review.rating_owner).all()
+        if not rows:
+            return None, 0
+        return round(sum(r[0] for r in rows) / len(rows), 1), len(rows)
+
+    @property
     def is_admin(self):
         return self.role == "admin"
 
@@ -125,6 +133,18 @@ class Listing(db.Model):
         return [label for field, label in self.AMENITIES if getattr(self, field)]
 
     @property
+    def rating(self):
+        """(moyenne du logement, nombre d'avis) ou (None, 0)."""
+        if not self.reviews:
+            return None, 0
+        return round(sum(r.rating_listing for r in self.reviews) / len(self.reviews), 1), len(self.reviews)
+
+    def future_slots(self):
+        from app.utils import now_tn
+        now = now_tn()
+        return [s for s in self.slots if s.start_at > now and not s.booked_by_id]
+
+    @property
     def cover(self):
         return self.photos[0] if self.photos else None
 
@@ -170,10 +190,12 @@ class ContactRequest(db.Model):
     sender_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     kind = db.Column(db.String(20), default="message")  # message | visite
     body = db.Column(db.Text, nullable=False)
-    status = db.Column(db.String(20), default="nouveau")  # nouveau | lu | accepte | refuse
+    status = db.Column(db.String(20), default="nouveau")  # nouveau | lu | accepte | refuse | annule
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    slot_id = db.Column(db.Integer, db.ForeignKey("visit_slot.id", ondelete="SET NULL"))  # créneau réservé
 
     sender = db.relationship("User")
+    slot = db.relationship("VisitSlot")
 
 
 class Notification(db.Model):
@@ -194,6 +216,9 @@ class Notification(db.Model):
         "refuse": ("bg-slate-100 text-slate-700", '<path d="M6 6l12 12M18 6L6 18"/>'),
         "favori": ("bg-pop-soft text-[#C2364B]", '<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>'),
         "signalement": ("bg-pop-soft text-warn", '<path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17v.5"/>'),
+        "alerte": ("bg-sun-soft text-ink", '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>'),
+        "visite_prevue": ("bg-okbg text-ok", '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/><path d="M9 15l2 2 4-4"/>'),
+        "avis": ("bg-sun-soft text-ink", '<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/>'),
         "bienvenue": ("bg-sun-soft text-ink", '<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/>'),
     }
 
@@ -228,3 +253,137 @@ class RateEvent(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     key = db.Column(db.String(120), nullable=False, index=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+
+# ---------------------------------------------------------------------------
+# Messagerie
+# ---------------------------------------------------------------------------
+class Conversation(db.Model):
+    """Fil de discussion entre un locataire et le propriétaire, à propos d'une annonce."""
+    __table_args__ = (db.UniqueConstraint("listing_id", "tenant_id", name="uq_conversation_listing_tenant"),)
+    id = db.Column(db.Integer, primary_key=True)
+    listing_id = db.Column(db.Integer, db.ForeignKey("listing.id", ondelete="CASCADE"), nullable=False, index=True)
+    tenant_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
+    owner_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    tenant_read_at = db.Column(db.DateTime, default=datetime.utcnow)
+    owner_read_at = db.Column(db.DateTime)
+
+    listing = db.relationship("Listing", backref=db.backref("conversations", cascade="all, delete-orphan", lazy=True))
+    tenant = db.relationship("User", foreign_keys=[tenant_id])
+    owner = db.relationship("User", foreign_keys=[owner_id])
+    messages = db.relationship("Message", backref="conversation", lazy="dynamic", cascade="all, delete-orphan",
+                               order_by="Message.created_at")
+
+    def other(self, user):
+        return self.owner if user.id == self.tenant_id else self.tenant
+
+    def is_member(self, user):
+        return user.is_authenticated and user.id in (self.tenant_id, self.owner_id)
+
+    def read_at(self, user):
+        return self.tenant_read_at if user.id == self.tenant_id else self.owner_read_at
+
+    def mark_read(self, user):
+        if user.id == self.tenant_id:
+            self.tenant_read_at = datetime.utcnow()
+        elif user.id == self.owner_id:
+            self.owner_read_at = datetime.utcnow()
+
+    def unread_for(self, user):
+        since = self.read_at(user)
+        q = self.messages.filter(Message.sender_id != user.id)
+        return q.filter(Message.created_at > since).count() if since else q.count()
+
+    @property
+    def last_message(self):
+        # Requête séparée : la relation `messages` est déjà triée par ordre croissant
+        return Message.query.filter_by(conversation_id=self.id).order_by(Message.created_at.desc(), Message.id.desc()).first()
+
+
+class Message(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    conversation_id = db.Column(db.Integer, db.ForeignKey("conversation.id", ondelete="CASCADE"), nullable=False, index=True)
+    sender_id = db.Column(db.Integer, db.ForeignKey("user.id"))  # None = message automatique d'IKRILI
+    kind = db.Column(db.String(20), default="texte")  # texte | visite | systeme
+    body = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    sender = db.relationship("User")
+
+
+def unread_messages_count(user):
+    """Nombre de messages non lus, toutes conversations confondues."""
+    convs = Conversation.query.filter(db.or_(Conversation.tenant_id == user.id, Conversation.owner_id == user.id)).all()
+    return sum(c.unread_for(user) for c in convs if not c.read_at(user) or c.updated_at > c.read_at(user))
+
+
+# ---------------------------------------------------------------------------
+# Alertes de recherche
+# ---------------------------------------------------------------------------
+class SavedSearch(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
+    params = db.Column(db.Text, nullable=False)  # critères au format JSON
+    label = db.Column(db.String(300))
+    by_email = db.Column(db.Boolean, default=True)
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    last_match_at = db.Column(db.DateTime)
+    match_count = db.Column(db.Integer, default=0)
+
+    user = db.relationship("User", backref=db.backref("saved_searches", cascade="all, delete-orphan", lazy=True))
+
+    @property
+    def criteria(self):
+        import json
+        try:
+            return json.loads(self.params)
+        except ValueError:
+            return {}
+
+
+# ---------------------------------------------------------------------------
+# Visites
+# ---------------------------------------------------------------------------
+class VisitSlot(db.Model):
+    """Créneau de visite proposé par le propriétaire (heure de Tunis)."""
+    id = db.Column(db.Integer, primary_key=True)
+    listing_id = db.Column(db.Integer, db.ForeignKey("listing.id", ondelete="CASCADE"), nullable=False, index=True)
+    start_at = db.Column(db.DateTime, nullable=False, index=True)
+    duration_min = db.Column(db.Integer, default=30)
+    booked_by_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    booked_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    listing = db.relationship("Listing", backref=db.backref("slots", cascade="all, delete-orphan", lazy=True,
+                                                            order_by="VisitSlot.start_at"))
+    booked_by = db.relationship("User")
+
+    @property
+    def end_at(self):
+        from datetime import timedelta
+        return self.start_at + timedelta(minutes=self.duration_min or 30)
+
+
+# ---------------------------------------------------------------------------
+# Avis
+# ---------------------------------------------------------------------------
+class Review(db.Model):
+    __table_args__ = (db.UniqueConstraint("listing_id", "author_id", name="uq_review_listing_author"),)
+    id = db.Column(db.Integer, primary_key=True)
+    listing_id = db.Column(db.Integer, db.ForeignKey("listing.id", ondelete="CASCADE"), nullable=False, index=True)
+    owner_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
+    author_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    rating_listing = db.Column(db.Integer, nullable=False)  # 1 à 5
+    rating_owner = db.Column(db.Integer, nullable=False)    # 1 à 5
+    comment = db.Column(db.Text)
+    owner_reply = db.Column(db.Text)
+    replied_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    listing = db.relationship("Listing", backref=db.backref("reviews", cascade="all, delete-orphan", lazy=True,
+                                                            order_by="Review.created_at.desc()"))
+    author = db.relationship("User", foreign_keys=[author_id])
+    owner = db.relationship("User", foreign_keys=[owner_id])

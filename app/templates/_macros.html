@@ -36,7 +36,7 @@
     {% if l.is_verified %}<span class="absolute top-3 left-3">{{ verified_badge() }}</span>{% endif %}
   </div>
   <div class="flex flex-col gap-1">
-    <span class="font-bold text-base group-hover:text-brand">{{ l.title }}</span>
+    <span class="flex items-start justify-between gap-2"><span class="font-bold text-base group-hover:text-brand">{{ l.title }}</span>{{ rating_badge(l) }}</span>
     <span class="text-sm text-muted">{{ l.city }}, {{ l.governorate }}</span>
     {% if distance and university %}
       <span class="text-sm font-semibold text-brand">{{ distance }} min à pied de {{ university.name }}</span>
@@ -48,3 +48,20 @@
   </div>
 </a>
 {% endmacro %}
+
+{% macro stars(value, size=16, cls='') -%}
+<span class="inline-flex items-center gap-0.5 {{ cls }}" role="img" aria-label="{{ value }} sur 5">
+  {%- for i in range(1, 6) %}
+    {% set fill = 1 if value >= i else (0.5 if value >= i - 0.5 else 0) %}
+    <svg width="{{ size }}" height="{{ size }}" viewBox="0 0 24 24" aria-hidden="true">
+      <defs><linearGradient id="st{{ i }}{{ (value * 10)|int }}"><stop offset="{{ (fill * 100)|int }}%" stop-color="#F5B400"/><stop offset="{{ (fill * 100)|int }}%" stop-color="#D9DDEA"/></linearGradient></defs>
+      <path fill="url(#st{{ i }}{{ (value * 10)|int }})" d="M12 2.5l2.9 6 6.6.8-4.9 4.6 1.3 6.5L12 17.2l-5.9 3.2 1.3-6.5L2.5 9.3l6.6-.8z"/>
+    </svg>
+  {%- endfor %}
+</span>
+{%- endmacro %}
+
+{% macro rating_badge(listing) -%}
+  {% set avg, n = listing.rating %}
+  {% if n %}<span class="inline-flex items-center gap-1 text-sm font-bold"><svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path fill="#F5B400" d="M12 2.5l2.9 6 6.6.8-4.9 4.6 1.3 6.5L12 17.2l-5.9 3.2 1.3-6.5L2.5 9.3l6.6-.8z"/></svg>{{ ('%.1f' % avg)|replace('.', ',') }} <span class="font-medium text-muted">({{ n }})</span></span>{% endif %}
+{%- endmacro %}

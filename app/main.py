@@ -2,9 +2,11 @@ from flask import Blueprint, abort, current_app, flash, redirect, render_templat
 from flask_login import current_user, login_required
 
 from app import db
-from app.models import ContactRequest, Listing, Notification, Report, University, User, notify
+from app.messages import get_or_create_conversation, post_message
+from app.models import ContactRequest, Conversation, Listing, Notification, Report, University, User, notify
 from app.security import client_ip, hit, limited, needs_email_verification
-from app.utils import GOVERNORATES, PROPERTY_TYPES, approx_coords, haversine_km, walking_minutes
+from app.search import clean_params, run_search
+from app.utils import GOVERNORATES, PROPERTY_TYPES, approx_coords, haversine_km, now_tn, walking_minutes
 
 bp = Blueprint("main", __name__)
 
@@ -44,64 +46,7 @@ def _bool_arg(name):
 @bp.route("/recherche")
 def search():
     args = request.args
-    q = Listing.query.filter_by(is_active=True)
-
-    text = args.get("q", "").strip()
-    if text:
-        like = f"%{text}%"
-        q = q.filter(db.or_(Listing.city.ilike(like), Listing.governorate.ilike(like),
-                            Listing.title.ilike(like)))
-    if args.get("gouvernorat"):
-        q = q.filter(Listing.governorate == args["gouvernorat"])
-    if args.get("type"):
-        q = q.filter(Listing.property_type == args["type"])
-    if args.get("min", type=int):
-        q = q.filter(Listing.price_tnd >= args.get("min", type=int))
-    if args.get("max", type=int):
-        q = q.filter(Listing.price_tnd <= args.get("max", type=int))
-    if args.get("chambres", type=int):
-        q = q.filter(Listing.rooms >= args.get("chambres", type=int))
-    if args.get("pour") in ("etudiants", "familles"):
-        q = q.filter(Listing.target.in_([args["pour"], "tous"]))
-    if _bool_arg("meuble"):
-        q = q.filter(Listing.furnished.is_(True))
-    if _bool_arg("coloc"):
-        q = q.filter(Listing.is_colocation.is_(True))
-    if _bool_arg("filles"):
-        q = q.filter(Listing.girls_only.is_(True))
-    for field, _label in Listing.AMENITIES:
-        if _bool_arg(field):
-            q = q.filter(getattr(Listing, field).is_(True))
-
-    sort = args.get("tri", "recent")
-    if sort == "prix":
-        q = q.order_by(Listing.price_tnd.asc())
-    else:
-        q = q.order_by(Listing.created_at.desc())
-
-    listings = q.all()
-
-    # Filtre de distance par rapport à une université (calculé en Python ;
-    # à remplacer par PostGIS quand le volume d'annonces augmentera).
-    university = None
-    distances = {}
-    uni_id = args.get("universite", type=int)
-    if uni_id:
-        university = db.session.get(University, uni_id)
-    if university:
-        max_min = args.get("minutes", default=30, type=int)
-        kept = []
-        for l in listings:
-            if l.latitude is None or l.longitude is None:
-                continue
-            mins = walking_minutes(haversine_km(university.latitude, university.longitude,
-                                                l.latitude, l.longitude))
-            if mins <= max_min:
-                distances[l.id] = mins
-                kept.append(l)
-        listings = kept
-        if sort == "proche":
-            listings.sort(key=lambda l: distances[l.id])
+    listings, university, distances = run_search(args)
 
     # Points pour la carte : toutes les annonces filtrées (pas seulement la page),
     # avec une position volontairement approximative.
@@ -176,8 +121,18 @@ def listing_detail(listing_id):
                 nearby.append((u, mins))
         nearby.sort(key=lambda x: x[1])
     is_fav = current_user.is_authenticated and listing in current_user.favorite_listings
+    conv = my_booking = None
+    if current_user.is_authenticated and current_user.id != listing.owner_id:
+        conv = Conversation.query.filter_by(listing_id=listing.id, tenant_id=current_user.id).first()
+        now = now_tn()
+        my_booking = next((s for s in listing.slots if s.booked_by_id == current_user.id and s.start_at > now), None)
+    slot_days = {}
+    for slot in listing.future_slots()[:40]:
+        slot_days.setdefault(slot.start_at.date(), []).append(slot)
     return render_template("listing.html", listing=listing, nearby=nearby[:4], is_fav=is_fav,
-                           approx=approx_coords(listing))
+                           approx=approx_coords(listing), conv=conv, my_booking=my_booking,
+                           slot_days=sorted(slot_days.items())[:7],
+                           owner_rating=listing.owner.owner_rating)
 
 
 @bp.route("/annonce/<int:listing_id>/contact", methods=["POST"])
@@ -196,33 +151,40 @@ def contact(listing_id):
         return back
     uid = current_user.id
     new_account = current_user.account_age_hours < 24
+    kind = "visite" if request.form.get("kind") == "visite" else "message"
+    body = request.form.get("body", "").strip()[:2000]
+    existing = Conversation.query.filter_by(listing_id=listing.id, tenant_id=uid).first()
+    if existing and kind == "message":
+        # Conversation déjà ouverte : on y envoie le message comme une réponse
+        return redirect(url_for("messages.thread", conv_id=existing.id), code=307)
     if (limited("contact_user", uid) or limited("contact_user_day", uid)
             or (new_account and limited("contact_user_new", uid))):
         flash("Tu as envoyé beaucoup de messages en peu de temps. Réessaie un peu plus tard.", "error")
         return back
-    kind = "visite" if request.form.get("kind") == "visite" else "message"
-    body = request.form.get("body", "").strip()[:2000]
     if kind == "visite" and not body:
         body = "Bonjour, je souhaiterais visiter ce logement. Quelles sont vos disponibilités ?"
     if kind == "visite" and ContactRequest.query.filter(
             ContactRequest.listing_id == listing.id, ContactRequest.sender_id == uid,
             ContactRequest.kind == "visite", ContactRequest.status.in_(["nouveau", "lu"])).first():
         flash("Tu as déjà une demande de visite en attente pour ce logement.", "info")
-        return back
+        return redirect(url_for("messages.thread", conv_id=existing.id)) if existing else back
     if not body:
         flash("Écris un message avant d'envoyer.", "error")
+        return back
+    hit("contact_user", uid); hit("contact_user_day", uid)
+    if new_account:
+        hit("contact_user_new", uid)
+    conv = get_or_create_conversation(listing, current_user)
+    if kind == "visite":
+        db.session.add(ContactRequest(listing_id=listing.id, sender_id=uid, kind="visite", body=body))
+        post_message(conv, current_user, body, kind="visite",
+                     notify_title=f"{current_user.full_name} demande une visite")
+        flash("Demande de visite envoyée au propriétaire.", "success")
     else:
-        hit("contact_user", uid); hit("contact_user_day", uid)
-        if new_account:
-            hit("contact_user_new", uid)
-        db.session.add(ContactRequest(listing_id=listing.id, sender_id=current_user.id, kind=kind, body=body))
-        notify(listing.owner_id, kind,
-               f"{current_user.full_name} " + ("demande une visite" if kind == "visite" else "t'a envoyé un message"),
-               f"« {listing.title} » : {body}", url_for("listings.dashboard", onglet="demandes"))
-        db.session.commit()
-        flash("Demande de visite envoyée au propriétaire." if kind == "visite"
-              else "Message envoyé au propriétaire.", "success")
-    return redirect(url_for("main.listing_detail", listing_id=listing.id))
+        post_message(conv, current_user, body)
+        flash("Message envoyé au propriétaire.", "success")
+    db.session.commit()
+    return redirect(url_for("messages.thread", conv_id=conv.id))
 
 
 @bp.route("/annonce/<int:listing_id>/favori", methods=["POST"])

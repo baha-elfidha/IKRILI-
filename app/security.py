@@ -69,6 +69,9 @@ LIMITS = {
     "contact_user": (10, 3600),         # messages / demandes de visite par heure
     "contact_user_new": (3, 3600),      # ... pour un compte de moins de 24 h
     "contact_user_day": (30, 86400),
+    "chat_user": (60, 3600),            # réponses dans une conversation existante
+    "chat_user_new": (20, 3600),
+    "alert_user": (10, 3600),           # créations d'alertes de recherche
     "report_ip": (5, 3600),             # signalements par adresse IP
     "publish_user": (5, 86400),         # nouvelles annonces par jour
 }

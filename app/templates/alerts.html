@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Mes alertes – IKRILI{% endblock %}
+{% block content %}
+{% set btn = "min-h-[40px] px-3.5 rounded-full border-[1.5px] border-line font-semibold text-sm flex items-center gap-1.5 hover:border-ink" %}
+<div class="max-w-3xl mx-auto px-4 sm:px-6 py-8 flex flex-col gap-6">
+  <div class="flex flex-col gap-1">
+    <span class="text-sm font-extrabold uppercase tracking-wider text-brand">Mon compte</span>
+    <h1 class="text-3xl sm:text-4xl font-extrabold">Mes alertes</h1>
+    <p class="text-muted">Tu es prévenu dès qu'une nouvelle annonce correspond à une de tes recherches.</p>
+  </div>
+
+  {% for a in items %}
+    <article class="p-4 sm:p-5 rounded-3xl border {{ 'border-line' if a.is_active else 'border-dashed border-[#D9DDEA] bg-slate-50' }} flex flex-col gap-3">
+      <div class="flex items-start gap-3">
+        <span class="shrink-0 w-11 h-11 rounded-2xl {{ 'bg-sun-soft text-ink' if a.is_active else 'bg-white text-muted' }} flex items-center justify-center">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+        </span>
+        <div class="flex-1 min-w-0 flex flex-col gap-0.5">
+          <span class="font-bold leading-snug">{{ a.label }}</span>
+          <span class="text-sm text-muted">
+            {% if not a.is_active %}En pause · {% endif %}
+            {{ a.match_count or 0 }} annonce{{ 's' if (a.match_count or 0) != 1 }} trouvée{{ 's' if (a.match_count or 0) != 1 }}{% if a.last_match_at %}, la dernière {{ time_ago(a.last_match_at) }}{% endif %}
+          </span>
+        </div>
+      </div>
+      <div class="flex flex-wrap gap-2 items-center">
+        <a href="{{ url_for('main.search', **a.criteria) }}" class="min-h-[40px] px-4 rounded-full bg-ink text-white font-bold text-sm flex items-center">Voir les résultats</a>
+        {% if mail_on %}
+        <form method="post" action="{{ url_for('alerts.update', alert_id=a.id, action='email') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="{{ btn }}" aria-pressed="{{ 'true' if a.by_email else 'false' }}">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
+            {{ 'E-mail activé' if a.by_email else 'E-mail désactivé' }}
+          </button>
+        </form>
+        {% endif %}
+        <form method="post" action="{{ url_for('alerts.update', alert_id=a.id, action='pause') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="{{ btn }}">{{ 'Mettre en pause' if a.is_active else 'Réactiver' }}</button>
+        </form>
+        <form method="post" action="{{ url_for('alerts.update', alert_id=a.id, action='supprimer') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="{{ btn }} text-red-700 hover:border-red-700">Supprimer</button>
+        </form>
+      </div>
+    </article>
+  {% else %}
+    <div class="p-8 rounded-3xl bg-sun-soft flex flex-col items-start gap-3">
+      <p class="font-display text-xl font-bold">Aucune alerte pour l'instant</p>
+      <p class="text-slate-700 leading-relaxed">Fais une recherche (quartier, budget, université…) puis clique sur <strong>« Créer une alerte »</strong> : tu recevras une notification à chaque nouvelle annonce qui correspond.</p>
+      <a href="{{ url_for('main.search') }}" class="min-h-[44px] px-5 rounded-full bg-ink text-white font-bold flex items-center">Faire une recherche</a>
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}

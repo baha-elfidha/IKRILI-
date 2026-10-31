@@ -1,0 +1,11 @@
+{% extends "email/_base.html" %}
+{% block content %}
+<p style="margin:0 0 6px; font-size:13px; font-weight:bold; color:#2D4BF0; text-transform:uppercase; letter-spacing:1px;">Nouvelle annonce pour ton alerte</p>
+<p style="margin:0 0 14px; font-size:13px; color:#4B5470;">{{ alert.label }}</p>
+{% if listing.cover %}<img src="{{ listing.cover.abs_url }}" alt="" width="464" style="display:block; width:100%; max-width:464px; height:auto; border-radius:14px; margin:0 0 16px;">{% endif %}
+<p style="margin:0 0 4px; font-size:20px; font-weight:bold;">{{ listing.title }}</p>
+<p style="margin:0 0 8px; color:#4B5470;">{{ listing.city }}, {{ listing.governorate }}{{ extra }}</p>
+<p style="margin:0 0 6px; font-size:22px; font-weight:bold;">{{ listing.price_tnd|tnd }} <span style="font-size:14px; font-weight:normal; color:#4B5470;">TND / mois</span></p>
+{% endblock %}
+{% block button %}Voir l'annonce{% endblock %}
+{% block footer_note %}Les bons logements partent vite : contacte le propriétaire rapidement. <a href="{{ manage }}" style="color:#2D4BF0;">Gérer mes alertes</a>{% endblock %}

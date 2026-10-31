@@ -1,10 +1,11 @@
 from datetime import datetime
 
-from flask import Blueprint, abort, flash, jsonify, redirect, render_template, request, url_for
+from flask import Blueprint, abort, current_app, flash, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
 from app import db
 from app.models import ContactRequest, Listing, Photo, notify
+from app.messages import get_or_create_conversation, post_message
 from app.security import hit, limited, needs_email_verification
 from app.utils import GOVERNORATES, PROPERTY_TYPES, delete_image, save_image
 
@@ -104,7 +105,16 @@ def create():
             if current_user.role == "locataire":
                 current_user.role = "proprietaire"
             db.session.commit()
-            flash("Ton annonce est en ligne.", "success")
+            from app.alerts import trigger_alerts
+            try:
+                n = trigger_alerts(listing)
+            except Exception:  # une alerte ne doit jamais empêcher la publication
+                current_app.logger.exception("Erreur pendant l'envoi des alertes")
+                db.session.rollback()
+                n = 0
+            flash("Ton annonce est en ligne." + (f" {n} personne{'s' if n > 1 else ''} qui cherchai{'ent' if n > 1 else 't'} "
+                  "ce type de logement vien" + ("nent" if n > 1 else "t") + " d'être prévenue" + ("s" if n > 1 else "") + "."
+                  if n else ""), "success")
             return redirect(url_for("main.listing_detail", listing_id=listing.id))
     return render_template("listing_form.html", listing=listing, form=request.form,
                            governorates=GOVERNORATES, property_types=PROPERTY_TYPES,
@@ -190,8 +200,10 @@ def dashboard():
         "favs": sum(len(l.favorited_by) for l in my_listings),
     }
     tab = request.args.get("onglet", "demandes" if stats["new"] else "annonces")
+    from app.models import Conversation
+    convs = {(c.listing_id, c.tenant_id): c for c in Conversation.query.filter_by(owner_id=current_user.id).all()}
     return render_template("dashboard.html", my_listings=my_listings, received=received, sent=sent,
-                           stats=stats, tab=tab)
+                           stats=stats, tab=tab, convs=convs)
 
 
 @bp.route("/demande/<int:request_id>/<action>", methods=["POST"])
@@ -203,15 +215,20 @@ def answer_request(request_id, action):
     if action in ("accepte", "refuse", "lu"):
         previous, req.status = req.status, action
         if action in ("accepte", "refuse") and previous != action:
-            owner = req.listing.owner
+            conv = get_or_create_conversation(req.listing, req.sender)
+            conv_url = url_for("messages.thread", conv_id=conv.id)
             if action == "accepte":
-                contact = owner.email + (f" · {owner.phone}" if owner.phone else "")
+                post_message(conv, None, f"{current_user.full_name} a accepté la demande de visite. "
+                                         "Mettez-vous d'accord sur le jour et l'heure ici.", kind="systeme")
                 notify(req.sender_id, "accepte", "Ta demande de visite a été acceptée !",
-                       f"« {req.listing.title} » – contacte {owner.full_name} pour fixer l'heure : {contact}",
-                       url_for("main.listing_detail", listing_id=req.listing_id))
+                       f"« {req.listing.title} » – fixe le jour et l'heure avec {current_user.full_name} dans la messagerie.",
+                       conv_url)
             else:
+                post_message(conv, None, "La demande de visite n'a pas été retenue.", kind="systeme")
                 notify(req.sender_id, "refuse", "Ta demande de visite n'a pas été retenue",
-                       f"« {req.listing.title} ». D'autres logements t'attendent sur IKRILI.",
-                       url_for("main.search"))
+                       f"« {req.listing.title} ». D'autres logements t'attendent sur IKRILI.", url_for("main.search"))
         db.session.commit()
+    nxt = request.form.get("next")
+    if nxt and nxt.startswith("/messages/"):
+        return redirect(nxt)
     return redirect(url_for("listings.dashboard", onglet="demandes"))

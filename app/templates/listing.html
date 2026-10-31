@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import photo_placeholder, verified_badge %}
+{% from "_macros.html" import photo_placeholder, verified_badge, stars, rating_badge %}
 {% block title %}{{ listing.title }} – {{ listing.city }} – IKRILI{% endblock %}
 {% block meta_description %}{{ listing.title }} à {{ listing.city }} ({{ listing.governorate }}), {{ listing.price_tnd|tnd }} TND par mois.{% endblock %}
 {% block head %}
@@ -91,6 +91,7 @@
           {% if listing.is_colocation %}<span class="px-2.5 py-1 rounded-full bg-brand-soft text-brand-dark text-xs font-bold">Colocation{% if listing.coloc_places %} · {{ listing.coloc_places }} place{{ 's' if listing.coloc_places > 1 }}{% endif %}{% if listing.girls_only %} · filles uniquement{% endif %}</span>{% endif %}
         </div>
         <h1 class="text-[28px] sm:text-4xl font-extrabold leading-tight tracking-tight">{{ listing.title }}</h1>
+        {% if listing.rating[1] %}<a href="#avis" class="self-start">{{ rating_badge(listing) }}</a>{% endif %}
         <p class="text-muted">
           {{ listing.city }}, {{ listing.governorate }}{% if listing.floor %} · {{ listing.floor }}{% endif %}
         </p>
@@ -152,6 +153,116 @@
       </section>
       {% endif %}
 
+      {# ---------- Visite ---------- #}
+      {% if not is_owner and (slot_days or my_booking) %}
+      <section id="visite" class="flex flex-col gap-3 scroll-mt-6">
+        <h2 class="text-xl font-extrabold">Réserver une visite</h2>
+        {% if my_booking %}
+          <div class="p-4 rounded-2xl bg-okbg flex flex-wrap items-center justify-between gap-3">
+            <span class="text-ok font-semibold">Ta visite est prévue {{ format_slot(my_booking.start_at) }}.</span>
+            <form method="post" action="{{ url_for('visits.cancel', slot_id=my_booking.id) }}" onsubmit="return confirm('Annuler ta visite ? Le propriétaire sera prévenu.');">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="next" value="{{ url_for('main.listing_detail', listing_id=listing.id) }}">
+              <button class="min-h-[40px] px-4 rounded-full border-[1.5px] border-ok/40 text-ok font-semibold text-sm hover:bg-white">Annuler</button>
+            </form>
+          </div>
+        {% else %}
+          <p class="text-muted -mt-1">Le propriétaire propose ces créneaux. Choisis-en un : la visite est confirmée tout de suite.</p>
+          <div class="flex flex-col gap-4">
+            {% for day, slots in slot_days %}
+              <div class="flex flex-col gap-2">
+                <span class="font-bold capitalize">{{ format_slot(slots[0].start_at).split(' à ')[0] }}</span>
+                <div class="flex flex-wrap gap-2">
+                  {% for s in slots %}
+                    {% if current_user.is_authenticated and not needs_verification %}
+                      <form method="post" action="{{ url_for('visits.book', slot_id=s.id) }}" onsubmit="return confirm('Réserver la visite {{ format_slot(s.start_at) }} ?');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button class="min-h-[44px] px-4 rounded-full border-[1.5px] border-brand text-brand-dark font-bold hover:bg-brand hover:text-white transition-colors">{{ s.start_at.strftime('%H:%M') }}</button>
+                      </form>
+                    {% else %}
+                      <a href="{{ url_for('auth.verify_pending') if current_user.is_authenticated else url_for('auth.login', next=request.path) }}"
+                         class="min-h-[44px] px-4 rounded-full border-[1.5px] border-brand text-brand-dark font-bold flex items-center hover:bg-brand-soft">{{ s.start_at.strftime('%H:%M') }}</a>
+                    {% endif %}
+                  {% endfor %}
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </section>
+      {% endif %}
+
+      {# ---------- Avis ---------- #}
+      {% set avg, n_reviews = listing.rating %}
+      {% if n_reviews or can_review(current_user, listing) %}
+      <section id="avis" class="flex flex-col gap-4 scroll-mt-6">
+        <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <h2 class="text-xl font-extrabold">Avis des locataires</h2>
+          {% if n_reviews %}<span class="flex items-center gap-2">{{ stars(avg, 18) }}<strong>{{ ('%.1f' % avg)|replace('.', ',') }}</strong><span class="text-muted">· {{ n_reviews }} avis</span></span>{% endif %}
+        </div>
+
+        {% if can_review(current_user, listing) %}
+          <form method="post" action="{{ url_for('reviews.create', listing_id=listing.id) }}" class="p-5 rounded-3xl bg-sun-soft flex flex-col gap-4">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <strong class="text-[17px]">Tu as visité ce logement : qu'en as-tu pensé ?</strong>
+            {% for field, label in [('rating_listing', 'Le logement'), ('rating_owner', 'Le propriétaire')] %}
+              <fieldset class="flex flex-wrap items-center gap-3">
+                <legend class="sr-only">{{ label }} (note sur 5)</legend>
+                <span class="w-36 font-semibold" aria-hidden="true">{{ label }}</span>
+                <span class="star-input flex flex-row-reverse justify-end gap-1">
+                  {% for v in range(5, 0, -1) %}
+                    <input type="radio" id="{{ field }}{{ v }}" name="{{ field }}" value="{{ v }}" required class="peer sr-only">
+                    <label for="{{ field }}{{ v }}" class="cursor-pointer text-[#D9DDEA] peer-checked:text-[#F5B400] hover:text-[#F5B400] [&:hover~label]:text-[#F5B400]" title="{{ v }} sur 5">
+                      <svg width="30" height="30" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2.5l2.9 6 6.6.8-4.9 4.6 1.3 6.5L12 17.2l-5.9 3.2 1.3-6.5L2.5 9.3l6.6-.8z"/></svg>
+                      <span class="sr-only">{{ v }} étoile{{ 's' if v > 1 }}</span>
+                    </label>
+                  {% endfor %}
+                </span>
+              </fieldset>
+            {% endfor %}
+            <label class="flex flex-col gap-1.5 font-semibold text-sm">Ton commentaire (facultatif)
+              <textarea name="comment" rows="3" maxlength="1000" class="px-3.5 py-3 rounded-xl border-[1.5px] border-[#D9DDEA] bg-white font-normal" placeholder="État du logement, quartier, réactivité du propriétaire…"></textarea>
+            </label>
+            <button class="self-start min-h-[48px] px-6 rounded-full bg-ink text-white font-bold">Publier mon avis</button>
+          </form>
+        {% endif %}
+
+        <ul class="flex flex-col gap-3">
+          {% for r in listing.reviews %}
+            <li class="p-4 rounded-3xl border border-line flex flex-col gap-2">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <span class="flex items-center gap-2.5">
+                  <span class="w-9 h-9 rounded-full bg-brand-soft text-brand-dark font-extrabold text-sm flex items-center justify-center">{{ r.author.initials }}</span>
+                  <span class="flex flex-col leading-tight"><strong class="text-[15px]">{{ r.author.full_name.split()[0] }}</strong><span class="text-xs text-muted">{{ r.created_at.strftime('%m/%Y') }} · après une visite</span></span>
+                </span>
+                <span class="flex flex-col items-end text-xs text-muted gap-0.5">
+                  <span class="flex items-center gap-1.5">Logement {{ stars(r.rating_listing, 13) }}</span>
+                  <span class="flex items-center gap-1.5">Propriétaire {{ stars(r.rating_owner, 13) }}</span>
+                </span>
+              </div>
+              {% if r.comment %}<p class="text-[15px] leading-relaxed whitespace-pre-line">{{ r.comment }}</p>{% endif %}
+              {% if r.owner_reply %}
+                <div class="ml-4 pl-4 border-l-2 border-brand/30 text-[15px]"><strong class="text-sm">Réponse du propriétaire</strong><p class="text-slate-700 whitespace-pre-line">{{ r.owner_reply }}</p></div>
+              {% elif is_owner %}
+                <form method="post" action="{{ url_for('reviews.reply', review_id=r.id) }}" class="flex flex-col sm:flex-row gap-2">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <label class="sr-only" for="reply{{ r.id }}">Ta réponse</label>
+                  <input id="reply{{ r.id }}" name="reply" maxlength="1000" required placeholder="Répondre publiquement à cet avis…" class="flex-1 px-3.5 py-2.5 rounded-full border-[1.5px] border-[#D9DDEA] text-sm">
+                  <button class="min-h-[40px] px-4 rounded-full bg-ink text-white font-bold text-sm">Répondre</button>
+                </form>
+              {% endif %}
+              {% if current_user.is_authenticated and (current_user.id == r.author_id or current_user.is_admin) %}
+                <form method="post" action="{{ url_for('reviews.delete', review_id=r.id) }}" onsubmit="return confirm('Supprimer cet avis ?');" class="self-end">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button class="text-xs font-semibold text-muted hover:text-red-700 underline">Supprimer{% if current_user.id != r.author_id %} (modération){% endif %}</button>
+                </form>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      </section>
+      {% endif %}
+
       <div class="p-5 rounded-2xl bg-[#FFF1EC] flex flex-col gap-1.5">
         <span class="font-bold text-[15px] text-warn">Conseil sécurité</span>
         <span class="text-sm text-slate-700 leading-relaxed">Ne verse jamais d'argent avant d'avoir visité le logement et signé un contrat.</span>
@@ -172,6 +283,7 @@
           <div class="flex flex-col">
             <span class="font-bold text-[15px]">{{ listing.owner.full_name }}</span>
             {% if listing.owner.is_verified %}<span class="text-[13px] font-semibold text-ok">Identité vérifiée</span>{% else %}<span class="text-[13px] text-muted">Identité non vérifiée</span>{% endif %}
+            {% if owner_rating[1] %}<span class="flex items-center gap-1.5 text-[13px] text-muted">{{ stars(owner_rating[0], 13) }} {{ ('%.1f' % owner_rating[0])|replace('.', ',') }} · {{ owner_rating[1] }} avis</span>{% endif %}
           </div>
         </div>
 
@@ -182,11 +294,24 @@
               <a href="{{ url_for('auth.verify_pending') }}" class="self-start font-bold underline underline-offset-2">Renvoyer l'e-mail de confirmation</a>
             </div>
           {% elif not is_owner %}
+            {% if my_booking %}
+              <a href="#visite" class="p-3.5 rounded-xl bg-okbg text-ok font-semibold text-[15px]">Visite prévue {{ format_slot(my_booking.start_at) }}</a>
+            {% elif slot_days %}
+              <a href="#visite" class="w-full min-h-[52px] rounded-xl bg-brand hover:bg-brand-dark text-white font-bold flex items-center justify-center gap-2">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>
+                Choisir un créneau de visite</a>
+            {% else %}
             <form method="post" action="{{ url_for('main.contact', listing_id=listing.id) }}">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <input type="hidden" name="kind" value="visite">
               <button type="submit" class="w-full min-h-[52px] rounded-xl bg-brand hover:bg-brand-dark text-white font-bold">Demander une visite</button>
             </form>
+            {% endif %}
+            {% if conv %}
+              <a href="{{ url_for('messages.thread', conv_id=conv.id) }}" class="w-full min-h-[48px] rounded-xl border-[1.5px] border-ink font-bold flex items-center justify-center gap-2 hover:bg-slate-50">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H8l-4 4z"/></svg>
+                Voir la conversation</a>
+            {% else %}
             <form method="post" action="{{ url_for('main.contact', listing_id=listing.id) }}" class="flex flex-col gap-2">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <input type="hidden" name="kind" value="message">
@@ -194,6 +319,7 @@
               <textarea id="body" name="body" rows="3" required class="px-3 py-2.5 rounded-lg border-[1.5px] border-[#D9DDEA]" placeholder="Bonjour, le logement est-il toujours disponible ?"></textarea>
               <button type="submit" class="min-h-[48px] rounded-xl border-[1.5px] border-ink font-bold hover:bg-slate-50">Envoyer</button>
             </form>
+            {% endif %}
             {% if listing.owner.phone %}
               {% if can_see_phone(current_user) %}
                 <details class="text-[15px]"><summary class="cursor-pointer font-semibold text-brand min-h-[32px]">Afficher le téléphone</summary>
@@ -203,7 +329,8 @@
               {% endif %}
             {% endif %}
           {% else %}
-            <a href="{{ url_for('listings.dashboard') }}" class="w-full min-h-[48px] rounded-xl border-[1.5px] border-ink font-bold flex items-center justify-center">Voir les demandes reçues</a>
+            <a href="{{ url_for('visits.manage', listing_id=listing.id) }}" class="w-full min-h-[48px] rounded-xl bg-brand text-white font-bold flex items-center justify-center">Gérer les créneaux de visite</a>
+            <a href="{{ url_for('messages.inbox') }}" class="w-full min-h-[48px] rounded-xl border-[1.5px] border-ink font-bold flex items-center justify-center">Voir mes messages</a>
           {% endif %}
         {% else %}
           <a href="{{ url_for('auth.login', next=request.path) }}" class="w-full min-h-[52px] rounded-xl bg-brand hover:bg-brand-dark text-white font-bold flex items-center justify-center">Se connecter pour contacter</a>
