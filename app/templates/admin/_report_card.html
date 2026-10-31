@@ -1,0 +1,50 @@
+{# Carte d'un signalement : variables r, counts (optionnel), btn, btn_danger, btn_primary #}
+{% set l = r.listing %}
+<article class="p-4 sm:p-5 rounded-3xl border {{ 'border-pop bg-pop-soft/40' if r.status == 'nouveau' else 'border-line' }} flex flex-col gap-3">
+  <div class="flex flex-wrap items-start justify-between gap-3">
+    <div class="flex flex-col gap-1 min-w-0">
+      <span class="text-xs font-extrabold uppercase tracking-wider text-warn">{{ reason_labels.get(r.reason, r.reason) }}</span>
+      <a href="{{ url_for('main.listing_detail', listing_id=l.id) }}" class="font-display text-lg font-bold leading-tight hover:text-brand">{{ l.title }}</a>
+      <span class="text-sm text-muted">{{ l.city }}, {{ l.governorate }} · {{ l.price_tnd|tnd }} TND · propriétaire :
+        <a class="font-semibold text-ink hover:text-brand" href="{{ url_for('admin.users', q=l.owner.email) }}">{{ l.owner.full_name }}</a>
+        {% if l.owner.is_blocked %}<span class="text-red-700 font-bold">(bloqué)</span>{% endif %}</span>
+    </div>
+    <span class="flex flex-col items-end gap-1 text-xs text-muted">
+      <span>{{ r.created_at.strftime('%d/%m/%Y · %H:%M') }}</span>
+      <span>par {{ r.reporter.full_name if r.reporter else 'un visiteur anonyme' }}</span>
+      {% if counts and counts.get(l.id, 0) > 1 %}<span class="px-2 py-0.5 rounded-full bg-warn text-white font-bold">{{ counts[l.id] }} signalements</span>{% endif %}
+    </span>
+  </div>
+  {% if r.details %}<p class="text-[15px] whitespace-pre-line p-3 rounded-2xl bg-white border border-line">{{ r.details }}</p>{% endif %}
+  <div class="flex flex-wrap gap-2 items-center">
+    {% if r.status == 'nouveau' %}
+      {% if l.is_active %}
+      <form method="post" action="{{ url_for('admin.handle_report', report_id=r.id, action='masquer') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="{{ btn_primary }}">Masquer l'annonce</button>
+      </form>
+      {% endif %}
+      <form method="post" action="{{ url_for('admin.handle_report', report_id=r.id, action='traite') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="{{ btn }}">Marquer comme traité</button>
+      </form>
+      <form method="post" action="{{ url_for('admin.handle_report', report_id=r.id, action='rejete') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="{{ btn }}">Rejeter (signalement infondé)</button>
+      </form>
+      {% if not l.owner.is_blocked and not l.owner.is_admin %}
+      <form method="post" action="{{ url_for('admin.user_action', user_id=l.owner_id, action='bloquer') }}"
+            onsubmit="var r = prompt('Motif du blocage (visible par l\'équipe uniquement) :', 'Arnaque signalée'); if (r === null) return false; this.reason.value = r;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="reason" value="">
+        <button class="{{ btn_danger }}">Bloquer le propriétaire</button>
+      </form>
+      {% endif %}
+    {% else %}
+      <span class="px-2.5 py-1 rounded-full text-xs font-bold {{ 'bg-okbg text-ok' if r.status == 'traite' else 'bg-slate-100 text-slate-700' }}">
+        {{ 'Traité' if r.status == 'traite' else 'Rejeté' }}{% if r.handled_at %} le {{ r.handled_at.strftime('%d/%m/%Y') }}{% endif %}
+      </span>
+      {% if not l.is_active %}<span class="text-sm text-muted">Annonce masquée</span>{% endif %}
+    {% endif %}
+  </div>
+</article>

@@ -38,7 +38,13 @@
   </div>
 
   {% if not listing.is_active %}
-    <div class="px-4 py-3 rounded-xl bg-amber-50 text-amber-900 font-semibold">Cette annonce est masquée : elle n'apparaît plus dans les recherches.</div>
+    <div class="px-4 py-3 rounded-xl bg-amber-50 text-amber-900 font-semibold">
+      {% if listing.admin_hidden %}Cette annonce a été masquée par l'équipe IKRILI{% if is_owner %} : contacte-nous si tu penses qu'il s'agit d'une erreur{% endif %}.
+      {% else %}Cette annonce est masquée : elle n'apparaît plus dans les recherches.{% endif %}
+    </div>
+  {% endif %}
+  {% if current_user.is_authenticated and current_user.is_admin %}
+    <a href="{{ url_for('admin.listings', q=listing.id) }}" class="self-start px-4 py-2 rounded-full bg-ink text-white text-sm font-bold">Modérer cette annonce</a>
   {% endif %}
 
   {# ---------- Galerie ---------- #}
@@ -170,7 +176,12 @@
         </div>
 
         {% if current_user.is_authenticated %}
-          {% if not is_owner %}
+          {% if not is_owner and needs_verification %}
+            <div class="p-4 rounded-xl bg-sun-soft flex flex-col gap-2 text-[15px]">
+              <strong>Confirme ton e-mail pour contacter ce propriétaire.</strong>
+              <a href="{{ url_for('auth.verify_pending') }}" class="self-start font-bold underline underline-offset-2">Renvoyer l'e-mail de confirmation</a>
+            </div>
+          {% elif not is_owner %}
             <form method="post" action="{{ url_for('main.contact', listing_id=listing.id) }}">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <input type="hidden" name="kind" value="visite">
@@ -184,8 +195,12 @@
               <button type="submit" class="min-h-[48px] rounded-xl border-[1.5px] border-ink font-bold hover:bg-slate-50">Envoyer</button>
             </form>
             {% if listing.owner.phone %}
-              <details class="text-[15px]"><summary class="cursor-pointer font-semibold text-brand min-h-[32px]">Afficher le téléphone</summary>
-                <a href="tel:{{ listing.owner.phone|replace(' ', '') }}" class="block pt-2 font-bold">{{ listing.owner.phone }}</a></details>
+              {% if can_see_phone(current_user) %}
+                <details class="text-[15px]"><summary class="cursor-pointer font-semibold text-brand min-h-[32px]">Afficher le téléphone</summary>
+                  <a href="tel:{{ listing.owner.phone|replace(' ', '') }}" class="block pt-2 font-bold">{{ listing.owner.phone }}</a></details>
+              {% else %}
+                <p class="text-sm text-muted">Le numéro de téléphone sera visible 24 h après ton inscription. En attendant, envoie un message au propriétaire.</p>
+              {% endif %}
             {% endif %}
           {% else %}
             <a href="{{ url_for('listings.dashboard') }}" class="w-full min-h-[48px] rounded-xl border-[1.5px] border-ink font-bold flex items-center justify-center">Voir les demandes reçues</a>

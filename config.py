@@ -32,3 +32,19 @@ class Config:
     CONTACT_EMAIL = os.environ.get("CONTACT_EMAIL", "contact@ikrili.tn")
     SITE_URL = os.environ.get("SITE_URL", "https://ikrili.onrender.com")
     LEGAL_UPDATED = "27 octobre 2026"
+
+    # E-mails (Brevo) – voir app/mail.py
+    MAIL_SERVER = os.environ.get("MAIL_SERVER", "smtp-relay.brevo.com")
+    MAIL_PORT = int(os.environ.get("MAIL_PORT", "587"))
+    MAIL_USERNAME = os.environ.get("MAIL_USERNAME")
+    MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")
+    MAIL_FROM = os.environ.get("MAIL_FROM", "IKRILI <" + os.environ.get("CONTACT_EMAIL", "contact@ikrili.tn") + ">")
+
+    # Sécurité des cookies : actif en production (Render définit la variable RENDER)
+    SESSION_COOKIE_SECURE = bool(os.environ.get("RENDER"))
+    REMEMBER_COOKIE_SECURE = bool(os.environ.get("RENDER"))
+    SESSION_COOKIE_SAMESITE = "Lax"
+    SESSION_COOKIE_HTTPONLY = True
+
+    # Un compte doit avoir au moins ce nombre d'heures pour voir le téléphone des propriétaires
+    PHONE_MIN_ACCOUNT_HOURS = 24

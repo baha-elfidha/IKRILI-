@@ -1,20 +1,22 @@
-{% extends "base.html" %}
+{% extends "auth/_layout.html" %}
 {% block title %}Connexion – IKRILI{% endblock %}
-{% block content %}
-{% set input = "w-full px-3 py-3 rounded-lg border-[1.5px] border-[#D9DDEA] bg-white text-[15px] font-normal" %}
-<div class="max-w-md mx-auto px-4 sm:px-6 py-12 flex flex-col gap-6">
-  <h1 class="text-3xl font-extrabold tracking-tight">Connexion</h1>
-  <form method="post" class="flex flex-col gap-4">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <label class="flex flex-col gap-1.5 font-semibold text-sm">E-mail
-      <input type="email" name="email" required autocomplete="email" class="{{ input }}">
-    </label>
-    <label class="flex flex-col gap-1.5 font-semibold text-sm">Mot de passe
-      <input type="password" name="password" required autocomplete="current-password" class="{{ input }}">
-    </label>
-    <label class="flex items-center gap-2.5 text-sm"><input type="checkbox" name="remember" value="1" class="w-[18px] h-[18px]"> Rester connecté</label>
-    <button type="submit" class="min-h-[52px] rounded-xl bg-brand hover:bg-brand-dark text-white font-bold">Se connecter</button>
-  </form>
-  <p class="text-sm text-muted">Pas encore de compte ? <a href="{{ url_for('auth.register') }}" class="text-brand font-semibold">Créer un compte</a></p>
-</div>
+{% block heading %}Connexion{% endblock %}
+{% block body %}
+{% set input = "w-full px-3.5 py-3 rounded-xl border-[1.5px] border-[#D9DDEA] bg-white text-[15px] font-normal focus:border-brand outline-none" %}
+<form method="post" class="flex flex-col gap-4">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <label class="flex flex-col gap-1.5 font-semibold text-sm">E-mail
+    <input type="email" name="email" required autocomplete="email" value="{{ email or '' }}" class="{{ input }}">
+  </label>
+  <div class="flex flex-col gap-1.5">
+    <div class="flex items-center justify-between gap-3">
+      <label for="password" class="font-semibold text-sm">Mot de passe</label>
+      <a href="{{ url_for('auth.forgot_password') }}" class="text-sm font-semibold text-brand">Mot de passe oublié ?</a>
+    </div>
+    <input id="password" type="password" name="password" required autocomplete="current-password" class="{{ input }}">
+  </div>
+  <label class="flex items-center gap-2.5 text-sm"><input type="checkbox" name="remember" value="1" class="w-[18px] h-[18px] accent-[#2D4BF0]"> Rester connecté</label>
+  <button type="submit" class="min-h-[52px] rounded-full bg-brand hover:bg-brand-dark text-white font-bold">Se connecter</button>
+</form>
+<p class="text-sm text-muted">Pas encore de compte ? <a href="{{ url_for('auth.register') }}" class="text-brand font-semibold">Créer un compte</a></p>
 {% endblock %}

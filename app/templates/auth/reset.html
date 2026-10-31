@@ -1,0 +1,17 @@
+{% extends "auth/_layout.html" %}
+{% block title %}Nouveau mot de passe – IKRILI{% endblock %}
+{% block heading %}Choisis un nouveau mot de passe{% endblock %}
+{% block intro %}<p class="text-muted">8 caractères minimum. Évite de réutiliser un mot de passe d'un autre site.</p>{% endblock %}
+{% block body %}
+{% set input = "w-full px-3.5 py-3 rounded-xl border-[1.5px] border-[#D9DDEA] bg-white text-[15px] font-normal focus:border-brand outline-none" %}
+<form method="post" class="flex flex-col gap-4">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <label class="flex flex-col gap-1.5 font-semibold text-sm">Nouveau mot de passe
+    <input type="password" name="password" required minlength="8" autocomplete="new-password" autofocus class="{{ input }}">
+  </label>
+  <label class="flex flex-col gap-1.5 font-semibold text-sm">Confirme le mot de passe
+    <input type="password" name="password2" required minlength="8" autocomplete="new-password" class="{{ input }}">
+  </label>
+  <button type="submit" class="min-h-[52px] rounded-full bg-brand hover:bg-brand-dark text-white font-bold">Enregistrer</button>
+</form>
+{% endblock %}

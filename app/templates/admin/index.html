@@ -1,0 +1,55 @@
+{% extends "admin/_layout.html" %}
+{% block heading %}Vue d'ensemble{% endblock %}
+{% block admin scoped %}
+<div class="grid gap-3 grid-cols-2 lg:grid-cols-4">
+  {% for value, label, sub, style, url in [
+    (pending_reports, 'Signalement' ~ ('s' if pending_reports != 1) ~ ' à traiter', None, 'bg-pop text-ink', url_for('admin.reports')),
+    (stats.online, 'Annonces en ligne', '+' ~ stats.listings_week ~ ' cette semaine', 'bg-brand text-white', url_for('admin.listings')),
+    (stats.users, 'Utilisateurs', '+' ~ stats.users_week ~ ' cette semaine', 'bg-sun text-ink', url_for('admin.users')),
+    (stats.requests_week, 'Demandes envoyées (7 j)', None, 'bg-brand-soft text-ink', None),
+  ] %}
+    <{{ 'a href=' ~ url if url else 'div' }} class="{{ style }} rounded-3xl p-5 flex flex-col gap-1 relative overflow-hidden {{ 'hover:-translate-y-0.5 transition-transform' if url }}">
+      <span aria-hidden="true" class="absolute -right-6 -bottom-6 w-20 h-20 rounded-full bg-white/15"></span>
+      <span class="font-display text-4xl font-extrabold leading-none">{{ value }}</span>
+      <span class="text-sm font-semibold">{{ label }}</span>
+      {% if sub %}<span class="text-xs font-semibold opacity-80">{{ sub }}</span>{% endif %}
+    </{{ 'a' if url else 'div' }}>
+  {% endfor %}
+</div>
+
+<div class="grid gap-6 lg:grid-cols-[1.4fr_1fr] items-start">
+  <section class="flex flex-col gap-3">
+    <div class="flex items-center justify-between gap-3">
+      <h2 class="text-xl font-extrabold">Derniers signalements</h2>
+      <a href="{{ url_for('admin.reports') }}" class="text-sm font-bold text-brand">Tout voir</a>
+    </div>
+    {% for r in reports %}{% include "admin/_report_card.html" %}
+    {% else %}<div class="p-6 rounded-3xl bg-slate-50 text-muted">Aucun signalement en attente.</div>{% endfor %}
+  </section>
+
+  <section class="flex flex-col gap-3">
+    <div class="flex items-center justify-between gap-3">
+      <h2 class="text-xl font-extrabold">Nouveaux inscrits</h2>
+      <a href="{{ url_for('admin.users') }}" class="text-sm font-bold text-brand">Tout voir</a>
+    </div>
+    <ul class="rounded-3xl border border-line divide-y divide-line">
+      {% for u in new_users %}
+        <li class="p-4 flex items-center gap-3">
+          <span class="w-10 h-10 rounded-full bg-brand-soft text-brand-dark font-extrabold flex items-center justify-center shrink-0 text-sm">{{ u.initials }}</span>
+          <a href="{{ url_for('admin.users', q=u.email) }}" class="flex-1 min-w-0 flex flex-col">
+            <span class="font-bold truncate">{{ u.full_name }}</span>
+            <span class="text-sm text-muted truncate">{{ u.email }}</span>
+          </a>
+          <span class="text-xs text-muted shrink-0">{{ u.created_at.strftime('%d/%m') }}</span>
+        </li>
+      {% endfor %}
+    </ul>
+    {% if stats.unverified_owners %}
+      <a href="{{ url_for('admin.users', filtre='a_verifier') }}" class="p-4 rounded-3xl bg-sun-soft flex items-center justify-between gap-3 font-semibold hover:bg-sun/40">
+        {{ stats.unverified_owners }} propriétaire{{ 's' if stats.unverified_owners != 1 }} à vérifier
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </a>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

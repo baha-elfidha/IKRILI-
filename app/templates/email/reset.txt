@@ -1,0 +1,9 @@
+Bonjour {{ user.full_name.split()[0] }},
+
+Tu as demandé à réinitialiser le mot de passe de ton compte IKRILI. Ouvre ce lien pour en choisir un nouveau :
+
+{{ link }}
+
+Ce lien est valable 1 heure et ne fonctionne qu'une fois. Si tu n'es pas à l'origine de cette demande, ignore cet e-mail : ton mot de passe actuel reste inchangé.
+
+— L'équipe IKRILI

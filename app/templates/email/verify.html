@@ -1,0 +1,7 @@
+{% extends "email/_base.html" %}
+{% block content %}
+<p style="margin:0 0 14px; font-size:22px; font-weight:bold;">Bienvenue {{ user.full_name.split()[0] }} !</p>
+<p style="margin:0 0 6px;">Merci de t'être inscrit sur IKRILI. Confirme ton adresse e-mail pour pouvoir contacter les propriétaires et publier des annonces.</p>
+{% endblock %}
+{% block button %}Confirmer mon e-mail{% endblock %}
+{% block footer_note %}Ce lien est valable 3 jours. Si tu n'as pas créé de compte sur IKRILI, ignore simplement cet e-mail.{% endblock %}

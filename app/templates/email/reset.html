@@ -1,0 +1,7 @@
+{% extends "email/_base.html" %}
+{% block content %}
+<p style="margin:0 0 14px; font-size:22px; font-weight:bold;">Mot de passe oublié ?</p>
+<p style="margin:0 0 6px;">Bonjour {{ user.full_name.split()[0] }}, tu as demandé à réinitialiser le mot de passe de ton compte IKRILI. Clique sur le bouton pour en choisir un nouveau.</p>
+{% endblock %}
+{% block button %}Choisir un nouveau mot de passe{% endblock %}
+{% block footer_note %}Ce lien est valable 1 heure et ne fonctionne qu'une fois. Si tu n'es pas à l'origine de cette demande, ignore cet e-mail : ton mot de passe actuel reste inchangé.{% endblock %}

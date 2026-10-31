@@ -13,7 +13,10 @@ Stack : **Flask · PostgreSQL · SQLAlchemy · Tailwind (CDN) · Leaflet / OpenS
 - Fiche annonce : galerie, équipements, universités proches, carte avec zone approximative (l'adresse exacte n'est jamais affichée).
 - Demande de visite et messages au propriétaire ; espace propriétaire pour accepter ou refuser les visites.
 - Favoris, signalement d'annonces suspectes, page de conseils anti-arnaque.
-- Protection CSRF sur tous les formulaires.
+- Mot de passe oublié (lien par e-mail, valable 1 h, à usage unique) et vérification de l'adresse e-mail.
+- Espace administrateur (`/admin`) : signalements, masquage d'annonces, blocage de comptes, badge « vérifié ».
+- Anti-abus : limites de tentatives de connexion, d'inscriptions, de messages et de signalements ; téléphone des propriétaires visible seulement pour les comptes de plus de 24 h.
+- Protection CSRF sur tous les formulaires, cookies sécurisés en production.
 
 ## Lancer en local
 
@@ -42,6 +45,12 @@ Pour te donner les droits d'administrateur, ouvre le **Shell** du service sur Re
 ```bash
 flask --app wsgi make-admin ton-email@exemple.com
 ```
+
+### E-mails (Brevo)
+
+Crée un compte gratuit sur brevo.com, valide l'adresse d'expéditeur, puis ajoute dans Render → Environment :
+`MAIL_USERNAME` et `MAIL_PASSWORD` (Brevo → SMTP & API → onglet SMTP) et `MAIL_FROM` (ex. `IKRILI <contact@ikrili.tn>`).
+Tant que ces variables sont absentes, les e-mails sont seulement écrits dans les journaux et la vérification d'e-mail n'est pas exigée.
 
 ### À savoir avant le lancement public
 

@@ -3,6 +3,7 @@ from flask_login import current_user, login_required
 
 from app import db
 from app.models import ContactRequest, Listing, Notification, Report, University, User, notify
+from app.security import client_ip, hit, limited, needs_email_verification
 from app.utils import GOVERNORATES, PROPERTY_TYPES, approx_coords, haversine_km, walking_minutes
 
 bp = Blueprint("main", __name__)
@@ -164,7 +165,8 @@ def _quick_chips(args):
 @bp.route("/annonce/<int:listing_id>")
 def listing_detail(listing_id):
     listing = db.get_or_404(Listing, listing_id)
-    if not listing.is_active and (not current_user.is_authenticated or current_user.id != listing.owner_id):
+    if not listing.is_active and (not current_user.is_authenticated
+                                  or (current_user.id != listing.owner_id and not current_user.is_admin)):
         abort(404)
     nearby = []
     if listing.latitude is not None:
@@ -185,13 +187,34 @@ def contact(listing_id):
     if listing.owner_id == current_user.id:
         flash("C'est ta propre annonce.", "info")
         return redirect(url_for("main.listing_detail", listing_id=listing.id))
+    back = redirect(url_for("main.listing_detail", listing_id=listing.id))
+    if needs_email_verification(current_user):
+        flash("Confirme d'abord ton adresse e-mail pour contacter les propriétaires.", "error")
+        return redirect(url_for("auth.verify_pending"))
+    if not listing.is_active:
+        flash("Cette annonce n'est plus disponible.", "error")
+        return back
+    uid = current_user.id
+    new_account = current_user.account_age_hours < 24
+    if (limited("contact_user", uid) or limited("contact_user_day", uid)
+            or (new_account and limited("contact_user_new", uid))):
+        flash("Tu as envoyé beaucoup de messages en peu de temps. Réessaie un peu plus tard.", "error")
+        return back
     kind = "visite" if request.form.get("kind") == "visite" else "message"
-    body = request.form.get("body", "").strip()
+    body = request.form.get("body", "").strip()[:2000]
     if kind == "visite" and not body:
         body = "Bonjour, je souhaiterais visiter ce logement. Quelles sont vos disponibilités ?"
+    if kind == "visite" and ContactRequest.query.filter(
+            ContactRequest.listing_id == listing.id, ContactRequest.sender_id == uid,
+            ContactRequest.kind == "visite", ContactRequest.status.in_(["nouveau", "lu"])).first():
+        flash("Tu as déjà une demande de visite en attente pour ce logement.", "info")
+        return back
     if not body:
         flash("Écris un message avant d'envoyer.", "error")
     else:
+        hit("contact_user", uid); hit("contact_user_day", uid)
+        if new_account:
+            hit("contact_user_new", uid)
         db.session.add(ContactRequest(listing_id=listing.id, sender_id=current_user.id, kind=kind, body=body))
         notify(listing.owner_id, kind,
                f"{current_user.full_name} " + ("demande une visite" if kind == "visite" else "t'a envoyé un message"),
@@ -241,11 +264,15 @@ def report(listing_id):
     listing = db.get_or_404(Listing, listing_id)
     if request.method == "POST":
         reason = request.form.get("reason")
+        if limited("report_ip", client_ip()):
+            flash("Tu as déjà envoyé plusieurs signalements. Réessaie plus tard.", "error")
+            return redirect(url_for("main.listing_detail", listing_id=listing.id))
         if reason not in dict(REPORT_REASONS):
             flash("Choisis un motif.", "error")
         else:
+            hit("report_ip", client_ip())
             db.session.add(Report(listing_id=listing.id, reason=reason,
-                                  details=request.form.get("details", "").strip(),
+                                  details=request.form.get("details", "").strip()[:2000],
                                   reporter_id=current_user.id if current_user.is_authenticated else None))
             for admin in User.query.filter_by(role="admin").all():
                 notify(admin.id, "signalement", "Annonce signalée : " + dict(REPORT_REASONS)[reason],

@@ -1,0 +1,9 @@
+Bienvenue {{ user.full_name.split()[0] }} !
+
+Merci de t'être inscrit sur IKRILI. Confirme ton adresse e-mail pour pouvoir contacter les propriétaires et publier des annonces :
+
+{{ link }}
+
+Ce lien est valable 3 jours. Si tu n'as pas créé de compte sur IKRILI, ignore simplement cet e-mail.
+
+— L'équipe IKRILI

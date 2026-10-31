@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+{% set input = "w-full px-3.5 py-3 rounded-xl border-[1.5px] border-[#D9DDEA] bg-white text-[15px] font-normal focus:border-brand outline-none" %}
+<div class="max-w-md mx-auto px-4 sm:px-6 py-12 flex flex-col gap-6">
+  {% block icon %}{% endblock %}
+  <div class="flex flex-col gap-2">
+    <h1 class="text-3xl sm:text-4xl font-extrabold">{% block heading %}{% endblock %}</h1>
+    {% block intro %}{% endblock %}
+  </div>
+  {% block body %}{% endblock %}
+</div>
+{% endblock %}

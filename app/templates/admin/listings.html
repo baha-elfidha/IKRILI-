@@ -1,0 +1,65 @@
+{% extends "admin/_layout.html" %}
+{% block heading %}Annonces{% endblock %}
+{% block admin scoped %}
+<form method="get" class="flex flex-wrap gap-2 items-center" role="search">
+  <label class="flex-1 min-w-[240px]">
+    <span class="sr-only">Rechercher une annonce</span>
+    <input name="q" value="{{ q }}" placeholder="Titre, quartier, e-mail du propriétaire ou n° d'annonce"
+           class="w-full px-4 py-2.5 rounded-full border-[1.5px] border-[#D9DDEA] bg-white text-[15px] focus:border-brand outline-none">
+  </label>
+  <input type="hidden" name="filtre" value="{{ filt }}">
+  <button class="min-h-[44px] px-5 rounded-full bg-ink text-white font-bold text-sm">Rechercher</button>
+</form>
+<div class="flex flex-wrap gap-2">
+  {% for key, label in [('', 'Toutes'), ('signalees', 'Signalées'), ('non_verifiees', 'Non vérifiées'), ('masquees', 'Masquées par IKRILI')] %}
+    <a href="{{ url_for('admin.listings', filtre=key, q=q or None) }}"
+       class="min-h-[40px] px-4 rounded-full text-sm font-semibold flex items-center border-[1.5px] {{ 'bg-ink border-ink text-white' if filt == key else 'border-[#D9DDEA] hover:border-ink' }}">{{ label }}</a>
+  {% endfor %}
+</div>
+
+<p class="text-sm text-muted">{{ items|length }} annonce{{ 's' if items|length != 1 }}{% if items|length == 200 %} (200 premières){% endif %}</p>
+<div class="flex flex-col gap-3">
+  {% for l in items %}
+    {% set open_reports = l.reports|selectattr('status', 'equalto', 'nouveau')|list %}
+    <article class="p-3 sm:p-4 rounded-3xl border {{ 'border-pop' if open_reports else 'border-line' }} flex flex-col sm:flex-row gap-4">
+      <a href="{{ url_for('main.listing_detail', listing_id=l.id) }}" class="shrink-0 sm:w-36">
+        {% if l.cover %}<img src="{{ l.cover.thumb }}" alt="" class="w-full h-32 sm:h-24 object-cover rounded-2xl {{ 'grayscale opacity-60' if not l.is_active }}">
+        {% else %}<span class="block w-full h-32 sm:h-24 rounded-2xl bg-brand-photo"></span>{% endif %}
+      </a>
+      <div class="flex-1 min-w-0 flex flex-col gap-1.5">
+        <div class="flex flex-wrap items-start gap-2">
+          <a href="{{ url_for('main.listing_detail', listing_id=l.id) }}" class="font-bold leading-tight hover:text-brand mr-auto">#{{ l.id }} · {{ l.title }}</a>
+          {% if l.is_active %}<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-okbg text-ok">En ligne</span>
+          {% elif l.admin_hidden == 'blocage' %}<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-red-50 text-red-700">Compte bloqué</span>
+          {% elif l.admin_hidden %}<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-pop-soft text-warn">Masquée par IKRILI</span>
+          {% else %}<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700">Masquée (propriétaire)</span>{% endif %}
+          {% if l.is_verified %}<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-okbg text-ok">Vérifiée</span>{% endif %}
+          {% if open_reports %}<a href="{{ url_for('admin.reports') }}" class="px-2.5 py-1 rounded-full text-xs font-bold bg-warn text-white">{{ open_reports|length }} signalement{{ 's' if open_reports|length > 1 }}</a>{% endif %}
+        </div>
+        <span class="text-sm text-muted">{{ l.city }}, {{ l.governorate }} · <strong class="text-ink">{{ l.price_tnd|tnd }} TND</strong> · publiée le {{ l.created_at.strftime('%d/%m/%Y') }} · {{ l.photos|length }} photo{{ 's' if l.photos|length != 1 }}</span>
+        <span class="text-sm text-muted">Propriétaire : <a href="{{ url_for('admin.users', q=l.owner.email) }}" class="font-semibold text-ink hover:text-brand">{{ l.owner.full_name }}</a> · {{ l.owner.email }}</span>
+        <div class="flex flex-wrap gap-2 pt-1">
+          {% if l.is_active %}
+            <form method="post" action="{{ url_for('admin.listing_action', listing_id=l.id, action='masquer') }}"
+                  onsubmit="var r = prompt('Motif envoyé au propriétaire :', 'Elle ne respecte pas les règles du site'); if (r === null) return false; this.reason.value = r;">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="reason" value="">
+              <button class="{{ btn_danger }}">Masquer</button>
+            </form>
+          {% elif l.admin_hidden %}
+            <form method="post" action="{{ url_for('admin.listing_action', listing_id=l.id, action='afficher') }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="{{ btn }}">Remettre en ligne</button>
+            </form>
+          {% endif %}
+          <form method="post" action="{{ url_for('admin.listing_action', listing_id=l.id, action='verifier') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="{{ btn if l.is_verified else btn_primary }}">{{ 'Retirer le badge' if l.is_verified else 'Marquer vérifiée' }}</button>
+          </form>
+        </div>
+      </div>
+    </article>
+  {% else %}
+    <div class="p-8 rounded-3xl bg-slate-50 text-muted">Aucune annonce ne correspond.</div>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -19,7 +19,10 @@ class User(UserMixin, db.Model):
     phone = db.Column(db.String(30))
     password_hash = db.Column(db.String(256), nullable=False)
     role = db.Column(db.String(20), default="locataire")  # locataire | proprietaire | admin
-    is_verified = db.Column(db.Boolean, default=False)
+    is_verified = db.Column(db.Boolean, default=False)       # badge « identité vérifiée » donné par un admin
+    email_verified = db.Column(db.Boolean, default=False)    # a cliqué sur le lien reçu par e-mail
+    is_blocked = db.Column(db.Boolean, default=False)
+    blocked_reason = db.Column(db.String(200))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     listings = db.relationship("Listing", backref="owner", lazy=True, cascade="all, delete-orphan")
@@ -36,6 +39,18 @@ class User(UserMixin, db.Model):
     def initials(self):
         parts = self.full_name.split()
         return "".join(p[0] for p in parts[:2]).upper()
+
+    @property
+    def is_admin(self):
+        return self.role == "admin"
+
+    @property
+    def account_age_hours(self):
+        return (datetime.utcnow() - (self.created_at or datetime.utcnow())).total_seconds() / 3600
+
+    @property
+    def is_active(self):  # utilisé par Flask-Login : un compte bloqué ne peut pas rester connecté
+        return not self.is_blocked
 
 
 @login_manager.user_loader
@@ -86,6 +101,9 @@ class Listing(db.Model):
     available_from = db.Column(db.Date)
     is_active = db.Column(db.Boolean, default=True)
     is_verified = db.Column(db.Boolean, default=False)
+    # Masquée par un administrateur : le propriétaire ne peut pas la remettre en ligne.
+    # Valeurs : None | "moderation" (décision sur l'annonce) | "blocage" (compte bloqué)
+    admin_hidden = db.Column(db.String(20))
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
 
     photos = db.relationship("Photo", backref="listing", lazy=True, cascade="all, delete-orphan",
@@ -199,3 +217,14 @@ class Report(db.Model):
     reason = db.Column(db.String(60), nullable=False)
     details = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    status = db.Column(db.String(20), default="nouveau")  # nouveau | traite | rejete
+    handled_at = db.Column(db.DateTime)
+
+    reporter = db.relationship("User")
+
+
+class RateEvent(db.Model):
+    """Trace des actions sensibles, pour limiter les abus (partagée entre les workers)."""
+    id = db.Column(db.Integer, primary_key=True)
+    key = db.Column(db.String(120), nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)

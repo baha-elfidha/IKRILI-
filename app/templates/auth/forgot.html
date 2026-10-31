@@ -1,0 +1,19 @@
+{% extends "auth/_layout.html" %}
+{% block title %}Mot de passe oublié – IKRILI{% endblock %}
+{% block icon %}
+<span class="w-14 h-14 rounded-2xl bg-brand-soft text-brand flex items-center justify-center">
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+</span>
+{% endblock %}
+{% block heading %}Mot de passe oublié{% endblock %}
+{% block intro %}<p class="text-muted leading-relaxed">Indique l'adresse e-mail de ton compte. Tu recevras un lien pour choisir un nouveau mot de passe, valable 1 heure.</p>{% endblock %}
+{% block body %}
+<form method="post" class="flex flex-col gap-4">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <label class="flex flex-col gap-1.5 font-semibold text-sm">E-mail
+    <input type="email" name="email" required autocomplete="email" autofocus class="w-full px-3.5 py-3 rounded-xl border-[1.5px] border-[#D9DDEA] bg-white text-[15px] font-normal focus:border-brand outline-none">
+  </label>
+  <button type="submit" class="min-h-[52px] rounded-full bg-brand hover:bg-brand-dark text-white font-bold">Envoyer le lien</button>
+</form>
+<a href="{{ url_for('auth.login') }}" class="text-sm font-semibold text-brand">&larr; Retour à la connexion</a>
+{% endblock %}

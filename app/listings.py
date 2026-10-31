@@ -5,6 +5,7 @@ from flask_login import current_user, login_required
 
 from app import db
 from app.models import ContactRequest, Listing, Photo, notify
+from app.security import hit, limited, needs_email_verification
 from app.utils import GOVERNORATES, PROPERTY_TYPES, delete_image, save_image
 
 bp = Blueprint("listings", __name__, url_prefix="/proprietaire")
@@ -82,9 +83,16 @@ def _owned_or_404(listing_id):
 @bp.route("/publier", methods=["GET", "POST"])
 @login_required
 def create():
+    if needs_email_verification(current_user):
+        flash("Confirme d'abord ton adresse e-mail pour publier une annonce.", "error")
+        return redirect(url_for("auth.verify_pending"))
     listing = Listing()
     if request.method == "POST":
+        if limited("publish_user", current_user.id) and not current_user.is_admin:
+            flash("Tu as publié beaucoup d'annonces aujourd'hui. Réessaie demain ou contacte-nous.", "error")
+            return redirect(url_for("listings.dashboard"))
         listing.owner_id = current_user.id
+        listing.is_verified = bool(current_user.is_verified)  # propriétaire vérifié => annonce vérifiée
         errors = _fill_listing(listing, request.form)
         if errors:
             for e in errors:
@@ -92,6 +100,7 @@ def create():
         else:
             db.session.add(listing)
             _save_photos(listing)
+            hit("publish_user", current_user.id)
             if current_user.role == "locataire":
                 current_user.role = "proprietaire"
             db.session.commit()
@@ -143,6 +152,9 @@ def delete_photo(photo_id):
 @login_required
 def toggle_active(listing_id):
     listing = _owned_or_404(listing_id)
+    if listing.admin_hidden and not current_user.is_admin:
+        flash("Cette annonce a été masquée par l'équipe IKRILI. Contacte-nous pour la remettre en ligne.", "error")
+        return redirect(url_for("listings.dashboard"))
     listing.is_active = not listing.is_active
     db.session.commit()
     flash("Annonce réactivée." if listing.is_active else "Annonce masquée (marquée comme louée).", "success")
