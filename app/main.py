@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
@@ -17,8 +19,10 @@ def index():
     active = Listing.query.filter_by(is_active=True)
     recent = active.order_by(Listing.created_at.desc()).limit(8).all()
 
-    # Annonce mise en avant dans le bandeau : la plus récente avec photo
-    featured = next((l for l in recent if l.cover), recent[0] if recent else None)
+    # Annonces « À la une » (payantes) d'abord, puis la plus récente avec photo
+    paid = (active.filter(Listing.featured_until > datetime.utcnow()).order_by(db.func.random()).limit(4).all())
+    recent = paid + [l for l in recent if l not in paid][: 8 - len(paid)]
+    featured = next((l for l in paid if l.cover), None) or next((l for l in recent if l.cover), recent[0] if recent else None)
 
     # Quartiers les plus fournis (données réelles)
     areas = (db.session.query(Listing.city, Listing.governorate, db.func.count(Listing.id),
@@ -47,6 +51,8 @@ def _bool_arg(name):
 def search():
     args = request.args
     listings, university, distances = run_search(args)
+    if args.get("tri", "recent") == "recent":
+        listings.sort(key=lambda l: not l.is_featured)  # tri stable : annonces « À la une » d'abord
 
     # Points pour la carte : toutes les annonces filtrées (pas seulement la page),
     # avec une position volontairement approximative.

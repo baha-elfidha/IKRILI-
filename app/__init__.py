@@ -38,13 +38,17 @@ def create_app(config_class=Config):
     from app.reviews import bp as reviews_bp
     from app.insights import bp as insights_bp
     from app.roommates import bp as roommates_bp
+    from app.seo import bp as seo_bp
+    from app.pwa import bp as pwa_bp
+    from app.promote import bp as promote_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
     app.register_blueprint(listings_bp)
     app.register_blueprint(notifications_bp)
     app.register_blueprint(admin_bp)
-    for extra in (messages_bp, alerts_bp, visits_bp, reviews_bp, insights_bp, roommates_bp):
+    for extra in (messages_bp, alerts_bp, visits_bp, reviews_bp, insights_bp, roommates_bp, seo_bp, pwa_bp,
+                  promote_bp):
         app.register_blueprint(extra)
 
     from app import cli
@@ -52,6 +56,11 @@ def create_app(config_class=Config):
 
     from app.utils import format_price
     app.jinja_env.filters["tnd"] = format_price
+    from app.seo import breadcrumb_ld, faq_ld, listing_ld, uni_slug, area_slug
+    app.jinja_env.globals.update(breadcrumb_ld=breadcrumb_ld, faq_ld=faq_ld, listing_ld=listing_ld,
+                                 uni_slug=uni_slug, area_slug=area_slug)
+    from app import i18n
+    i18n.init_app(app)
 
     from datetime import date
 

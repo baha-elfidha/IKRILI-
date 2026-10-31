@@ -12,10 +12,13 @@
       <span class="text-sm font-extrabold uppercase tracking-wider text-brand">Mon espace</span>
       <h1 class="text-3xl sm:text-4xl font-extrabold">Salut {{ current_user.full_name.split()[0] }} !</h1>
     </div>
+    <div class="flex flex-wrap gap-2">
+    <a href="{{ url_for('promote.agency') }}" class="min-h-[48px] px-5 rounded-full border-[1.5px] border-line font-bold flex items-center hover:border-ink">{{ 'Mon agence' if current_user.is_agency else ('Agence : demande en cours' if current_user.agency_status == 'en_attente' else 'Compte agence') }}</a>
     <a href="{{ url_for('listings.create') }}" class="min-h-[48px] pl-4 pr-5 rounded-full bg-brand hover:bg-brand-dark text-white font-bold flex items-center gap-2">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
       Nouvelle annonce
     </a>
+    </div>
   </div>
 
   {# --- Chiffres clés --- #}
@@ -78,11 +81,17 @@
               <span>{{ l.requests|length }} demande{{ 's' if l.requests|length != 1 }}</span>
               <span>{{ l.favorited_by|length }} favori{{ 's' if l.favorited_by|length != 1 }}</span>
             </div>
+            {% set pend = l.boosts|selectattr('status', 'equalto', 'en_attente')|first %}
+            {% if l.is_featured %}<span class="self-start px-2.5 py-1 rounded-full bg-sun text-xs font-extrabold">À la une jusqu'au {{ l.featured_until.strftime('%d/%m') }}</span>
+            {% elif pend %}<a href="{{ url_for('promote.boost_status', reference=pend.reference) }}" class="self-start px-2.5 py-1 rounded-full bg-sun-soft text-xs font-bold">Mise en avant : paiement en attente ({{ pend.reference }})</a>{% endif %}
             {% if not l.photos %}<span class="text-sm font-semibold text-warn">Ajoute des photos : les annonces avec photos reçoivent bien plus de demandes.</span>{% endif %}
             <div class="flex flex-wrap gap-2 pt-1">
               <a href="{{ url_for('listings.edit', listing_id=l.id) }}" class="{{ btn }}">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>Modifier
               </a>
+              {% if l.is_active %}<a href="{{ url_for('promote.boost', listing_id=l.id) }}" class="{{ btn }} bg-sun border-sun hover:border-ink">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.6 7L12 17.3 5.8 21l1.6-7L2 9.2l7.1-.6z"/></svg>{{ 'Prolonger' if l.is_featured else 'Mettre en avant' }}
+              </a>{% endif %}
               <a href="{{ url_for('insights.listing_stats', listing_id=l.id) }}" class="{{ btn }}">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Statistiques
               </a>

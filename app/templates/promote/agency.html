@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Compte agence – IKRILI{% endblock %}
+{% block content %}
+{% set input = "w-full px-3.5 py-3 rounded-xl border-[1.5px] border-[#D9DDEA] bg-white text-[15px] font-normal focus:border-brand outline-none" %}
+{% set lbl = "flex flex-col gap-1.5 font-semibold text-sm" %}
+<div class="max-w-3xl mx-auto px-4 sm:px-6 py-8 flex flex-col gap-6">
+  <div class="flex flex-col gap-1">
+    <a href="{{ url_for('listings.dashboard') }}" class="self-start text-sm font-semibold text-brand mb-2">&larr; Mon espace</a>
+    <span class="text-sm font-extrabold uppercase tracking-wider text-brand">Professionnels</span>
+    <h1 class="text-3xl sm:text-4xl font-extrabold">Compte agence immobilière</h1>
+  </div>
+
+  {% if u.agency_status == 'validee' %}
+    <div class="p-5 rounded-3xl bg-okbg flex flex-wrap items-center justify-between gap-3">
+      <span class="text-ok font-bold">{{ u.agency_name }} est une agence validée.</span>
+      <a href="{{ url_for('promote.agency_page', user_id=u.id) }}" class="min-h-[44px] px-5 rounded-full bg-ink text-white font-bold flex items-center">Voir la page publique</a>
+    </div>
+    <form method="post" class="flex flex-col gap-4">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label class="{{ lbl }}">Ville<input name="agency_city" value="{{ u.agency_city or '' }}" class="{{ input }}"></label>
+      <label class="{{ lbl }}">Présentation de l'agence<textarea name="agency_bio" rows="5" maxlength="1500" class="{{ input }}">{{ u.agency_bio or '' }}</textarea></label>
+      <button class="self-start min-h-[48px] px-6 rounded-full bg-brand text-white font-bold">Enregistrer</button>
+    </form>
+  {% elif u.agency_status == 'en_attente' %}
+    <div class="p-5 rounded-3xl bg-sun-soft"><strong>Demande en cours de vérification</strong> pour « {{ u.agency_name }} ». Tu recevras une notification dès qu'elle sera traitée.</div>
+  {% else %}
+    {% if u.agency_status == 'refusee' %}<div class="p-4 rounded-2xl bg-red-50 text-red-800 font-semibold">Ta précédente demande n'a pas été validée. Tu peux la corriger et la renvoyer.</div>{% endif %}
+    <ul class="grid gap-3 sm:grid-cols-3">
+      {% for t, d in [('Page publique', 'Toutes tes annonces sur une page à ton nom, à partager.'),
+                      ('Badge « Agence »', 'Ton nom d\'agence apparaît sur chaque annonce.'),
+                      ('Publier sans limite', 'Jusqu\'à 40 nouvelles annonces par jour, au lieu de 5.')] %}
+        <li class="p-4 rounded-2xl bg-slate-50 flex flex-col gap-1"><strong>{{ t }}</strong><span class="text-sm text-muted">{{ d }}</span></li>
+      {% endfor %}
+    </ul>
+    <p class="text-[15px]">{% if price %}L'offre agence coûte <strong>{{ price }} TND par mois</strong>, payable par D17 ou virement après validation.{% else %}<strong>L'offre agence est gratuite pendant le lancement d'IKRILI.</strong>{% endif %}</p>
+    <form method="post" class="flex flex-col gap-4">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="grid gap-4 sm:grid-cols-2">
+        <label class="{{ lbl }}">Nom de l'agence<input name="agency_name" required maxlength="120" value="{{ form.get('agency_name') or u.agency_name or '' }}" class="{{ input }}"></label>
+        <label class="{{ lbl }}">Matricule fiscal ou numéro RNE<input name="agency_tax_id" required maxlength="40" value="{{ form.get('agency_tax_id') or u.agency_tax_id or '' }}" class="{{ input }}" placeholder="Ex. 1234567/A/M/000"></label>
+        <label class="{{ lbl }} sm:col-span-2">Ville<input name="agency_city" required maxlength="120" value="{{ form.get('agency_city') or u.agency_city or '' }}" class="{{ input }}" placeholder="Ex. Ariana"></label>
+      </div>
+      <label class="{{ lbl }}">Présentation (facultatif)<textarea name="agency_bio" rows="4" maxlength="1500" class="{{ input }}">{{ form.get('agency_bio') or u.agency_bio or '' }}</textarea></label>
+      <p class="text-sm text-muted">Nous vérifions ces informations avant de valider le compte. Le matricule n'est jamais affiché publiquement.</p>
+      <button class="self-start min-h-[52px] px-7 rounded-full bg-brand hover:bg-brand-dark text-white font-bold">Envoyer la demande</button>
+    </form>
+  {% endif %}
+</div>
+{% endblock %}

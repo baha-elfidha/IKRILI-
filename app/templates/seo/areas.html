@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% from "seo/_parts.html" import breadcrumb %}
+{% block title %}Location en Tunisie par quartier – IKRILI{% endblock %}
+{% block meta_description %}Appartements, maisons et colocations à louer quartier par quartier : Ennasr, El Ghazela, La Marsa, Menzah… Loyers médians et annonces vérifiées.{% endblock %}
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 sm:px-6 py-10 flex flex-col gap-6">
+  {{ breadcrumb([('Accueil', url_for('main.index')), ('Location', None)]) }}
+  <h1 class="text-4xl sm:text-5xl font-extrabold">Location <span class="mark">par quartier</span></h1>
+  <p class="text-lg text-slate-700 max-w-3xl">Tous les quartiers où des logements sont à louer en ce moment sur IKRILI.</p>
+  {% for gov, rows in by_gov %}
+    <section id="{{ gov|lower }}" class="flex flex-col gap-3 scroll-mt-6">
+      <h2 class="text-2xl font-extrabold">{{ gov }}</h2>
+      <div class="flex flex-wrap gap-2">
+        {% for s, c, g, n in rows %}<a href="{{ url_for('seo.area', slug=s) }}" class="min-h-[44px] px-4 rounded-full border-[1.5px] border-line font-semibold text-sm flex items-center hover:border-ink">Location à {{ c }} <span class="ms-1.5 text-muted">{{ n }}</span></a>{% endfor %}
+      </div>
+    </section>
+  {% else %}
+    <p class="text-muted">Pas encore d'annonce en ligne.</p>
+  {% endfor %}
+</div>
+{% endblock %}

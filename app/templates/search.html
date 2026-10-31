@@ -250,7 +250,7 @@
   var map = L.map(mapEl, { zoomControl: true, scrollWheelZoom: true }).setView([36.82, 10.18], 11);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(map);
 
-  function fmt(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
+  function fmt(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '\u00a0'); }
   function esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
   var markers = {}, bounds = [];

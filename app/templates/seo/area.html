@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% from "_macros.html" import listing_card %}
+{% from "seo/_parts.html" import breadcrumb, faq_block, stat_tiles %}
+{% block title %}Location à {{ city }} ({{ gov }}) : appartements et colocations – IKRILI{% endblock %}
+{% block meta_description %}{{ stats.n }} logements à louer à {{ city }}, {{ gov }}{% if stats.median %} – loyer médian {{ stats.median }} TND{% endif %}. Appartements, maisons, studios et colocations pour étudiants et familles.{% endblock %}
+{% block content %}
+<section class="bg-sun-soft">
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 py-10 sm:py-14 flex flex-col gap-4">
+    {{ breadcrumb([('Accueil', url_for('main.index')), ('Location', url_for('seo.areas_index')), (gov, url_for('seo.areas_index') ~ '#' ~ gov|lower), (city, None)]) }}
+    <h1 class="text-[34px] leading-[1.05] sm:text-5xl font-extrabold">Location à <span class="mark">{{ city }}</span></h1>
+    <p class="text-lg text-slate-700 max-w-3xl leading-relaxed">Appartements, maisons, studios et colocations à louer à {{ city }} ({{ gov }}), pour les étudiants comme pour les familles.</p>
+    <div class="flex flex-wrap gap-2">
+      <a href="{{ url_for('main.search', q=city) }}" class="min-h-[48px] px-5 rounded-full bg-ink text-white font-bold flex items-center">Voir sur la carte</a>
+      <a href="{{ url_for('insights.market') }}" class="min-h-[48px] px-5 rounded-full bg-white font-bold flex items-center">Prix du marché</a>
+    </div>
+  </div>
+</section>
+<div class="max-w-6xl mx-auto px-4 sm:px-6 py-8 flex flex-col gap-10">
+  {{ stat_tiles(stats) }}
+  <section class="flex flex-col gap-4" aria-labelledby="t-list">
+    <h2 id="t-list" class="text-2xl font-extrabold">Logements à louer à {{ city }}</h2>
+    <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {% for l in listings %}{{ listing_card(l) }}{% endfor %}
+    </div>
+  </section>
+  {% if typologies %}
+  <section class="flex flex-col gap-3" aria-labelledby="t-typo">
+    <h2 id="t-typo" class="text-2xl font-extrabold">Loyers à {{ city }} par typologie</h2>
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      {% for t, med, n in typologies %}
+        <div class="p-4 rounded-2xl border border-line flex flex-col"><span class="font-display text-xl font-extrabold">{{ t }}</span><span><strong>{{ med|tnd }} TND</strong> <span class="text-muted text-sm">· {{ n }} annonces</span></span></div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+  {% if unis %}
+  <section class="flex flex-col gap-3" aria-labelledby="t-unis">
+    <h2 id="t-unis" class="text-2xl font-extrabold">Universités proches</h2>
+    <ul class="flex flex-col divide-y divide-line border-y border-line">
+      {% for m, u, s in unis %}<li><a href="{{ url_for('seo.university', slug=s) }}" class="py-3 flex justify-between gap-3 hover:text-brand"><span class="font-semibold">{{ u.name }} <span class="text-muted font-normal">· {{ u.zone }}</span></span><span class="font-bold whitespace-nowrap">≈ {{ m }} min à pied</span></a></li>{% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+  {{ faq_block(faq) }}
+  {% if siblings %}
+  <section class="flex flex-col gap-3" aria-labelledby="t-sib">
+    <h2 id="t-sib" class="text-xl font-extrabold">Autres quartiers – {{ gov }}</h2>
+    <div class="flex flex-wrap gap-2">
+      {% for s, c, g, n in siblings %}<a href="{{ url_for('seo.area', slug=s) }}" class="min-h-[44px] px-4 rounded-full bg-slate-100 font-semibold text-sm flex items-center hover:bg-slate-200">Location à {{ c }}</a>{% endfor %}
+    </div>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}

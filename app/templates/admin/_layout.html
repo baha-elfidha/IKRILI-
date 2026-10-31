@@ -11,7 +11,7 @@
     <h1 class="text-3xl sm:text-4xl font-extrabold">{% block heading %}{% endblock %}</h1>
   </div>
   <nav aria-label="Sections d'administration" class="flex gap-1 p-1 rounded-2xl bg-slate-100 self-start max-w-full overflow-x-auto no-scrollbar">
-    {% for key, label, endpoint in [('index', "Vue d'ensemble", 'admin.index'), ('reports', 'Signalements', 'admin.reports'), ('listings', 'Annonces', 'admin.listings'), ('users', 'Utilisateurs', 'admin.users')] %}
+    {% for key, label, endpoint in [('index', "Vue d'ensemble", 'admin.index'), ('reports', 'Signalements', 'admin.reports'), ('listings', 'Annonces', 'admin.listings'), ('users', 'Utilisateurs', 'admin.users'), ('revenus', 'Revenus', 'promote.admin_list')] %}
       <a href="{{ url_for(endpoint) }}" {% if tab == key %}aria-current="page"{% endif %}
          class="shrink-0 min-h-[44px] px-4 rounded-xl text-sm font-bold flex items-center gap-2 {{ 'bg-white text-ink shadow-sm' if tab == key else 'text-muted hover:text-ink' }}">
         {{ label }}

@@ -24,6 +24,21 @@ class User(UserMixin, db.Model):
     is_blocked = db.Column(db.Boolean, default=False)
     blocked_reason = db.Column(db.String(200))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    # Compte agence immobilière (validé par un administrateur)
+    agency_status = db.Column(db.String(20))     # None | en_attente | validee | refusee
+    agency_name = db.Column(db.String(120))
+    agency_city = db.Column(db.String(120))
+    agency_tax_id = db.Column(db.String(40))     # matricule fiscal ou numéro RNE
+    agency_bio = db.Column(db.Text)
+    agency_requested_at = db.Column(db.DateTime)
+
+    @property
+    def is_agency(self):
+        return self.agency_status == "validee"
+
+    @property
+    def display_name(self):
+        return self.agency_name if self.is_agency and self.agency_name else self.full_name
 
     listings = db.relationship("Listing", backref="owner", lazy=True, cascade="all, delete-orphan")
     favorite_listings = db.relationship("Listing", secondary=favorites, lazy="subquery",
@@ -112,6 +127,11 @@ class Listing(db.Model):
     # Masquée par un administrateur : le propriétaire ne peut pas la remettre en ligne.
     # Valeurs : None | "moderation" (décision sur l'annonce) | "blocage" (compte bloqué)
     admin_hidden = db.Column(db.String(20))
+    featured_until = db.Column(db.DateTime)  # mise en avant payante (« À la une ») jusqu'à cette date
+
+    @property
+    def is_featured(self):
+        return bool(self.featured_until and self.featured_until > datetime.utcnow() and self.is_active)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
 
     photos = db.relationship("Photo", backref="listing", lazy=True, cascade="all, delete-orphan",
@@ -219,6 +239,7 @@ class Notification(db.Model):
         "alerte": ("bg-sun-soft text-ink", '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>'),
         "visite_prevue": ("bg-okbg text-ok", '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/><path d="M9 15l2 2 4-4"/>'),
         "avis": ("bg-sun-soft text-ink", '<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/>'),
+        "promo": ("bg-sun-soft text-ink", '<path d="M12 2l2.4 6.9H22l-6 4.4 2.3 7L12 16l-6.3 4.3 2.3-7-6-4.4h7.6z"/>'),
         "bienvenue": ("bg-sun-soft text-ink", '<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/>'),
     }
 
@@ -435,3 +456,27 @@ class RoommateProfile(db.Model):
 
     user = db.relationship("User", backref=db.backref("roommate_profile", uselist=False, cascade="all, delete-orphan"))
     university = db.relationship("University")
+
+
+class Boost(db.Model):
+    """Demande de mise en avant d'une annonce, payée hors ligne (D17, virement) et activée par un admin."""
+    id = db.Column(db.Integer, primary_key=True)
+    listing_id = db.Column(db.Integer, db.ForeignKey("listing.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="CASCADE"), nullable=False, index=True)
+    days = db.Column(db.Integer, nullable=False)
+    price_tnd = db.Column(db.Integer, nullable=False)
+    reference = db.Column(db.String(20), unique=True, nullable=False)
+    status = db.Column(db.String(20), default="en_attente")  # en_attente | active | refusee | annulee
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    decided_at = db.Column(db.DateTime)
+    ends_at = db.Column(db.DateTime)
+    note = db.Column(db.String(200))
+
+    listing = db.relationship("Listing", backref=db.backref("boosts", lazy=True, cascade="all, delete-orphan"))
+    user = db.relationship("User")
+
+    @property
+    def state(self):
+        if self.status == "active" and self.ends_at and self.ends_at <= datetime.utcnow():
+            return "expiree"
+        return self.status

@@ -311,7 +311,7 @@
     var t = form.elements['title'].value.trim(), p = form.elements['price_tnd'].value;
     var c = form.elements['city'].value.trim(), g = form.elements['governorate'].value;
     document.getElementById('preview-title').textContent = t || 'Titre de ton annonce';
-    document.getElementById('preview-price').textContent = p ? String(p).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') : '—';
+    document.getElementById('preview-price').textContent = p ? String(p).replace(/\B(?=(\d{3})+(?!\d))/g, '\u00a0') : '—';
     document.getElementById('preview-place').textContent = c || g ? [c, g].filter(Boolean).join(', ') : 'Quartier, gouvernorat';
     var first = grid.querySelector('img');
     if (first) document.getElementById('preview-img').style.backgroundImage = 'url(' + first.src + ')';
@@ -320,7 +320,7 @@
 
   /* ---------- Estimation du juste prix ---------- */
   var estTimer, estCss = { bon_plan: 'bg-okbg text-ok', moyenne: 'bg-brand-soft text-brand-dark', eleve: 'bg-pop-soft text-warn' };
-  var fmt = function (n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); };
+  var fmt = function (n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '\u00a0'); };
   function estimate() {
     var fd = new FormData(form);
     fd.delete('photos');

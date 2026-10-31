@@ -1,0 +1,61 @@
+{% extends "admin/_layout.html" %}
+{% block heading %}Revenus{% endblock %}
+{% block admin %}
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+  {% for n, label in [(pending|length, 'paiements à vérifier'), (active|length, 'annonces à la une'), (agencies|length, 'agences à valider'), (revenue ~ ' TND', 'activé sur 30 jours')] %}
+    <div class="p-4 rounded-2xl {{ 'bg-sun' if loop.first and n else 'bg-slate-50' }} flex flex-col"><span class="font-display text-2xl font-extrabold">{{ n }}</span><span class="text-sm font-semibold text-muted">{{ label }}</span></div>
+  {% endfor %}
+</div>
+
+<section class="flex flex-col gap-3">
+  <h2 class="text-xl font-extrabold">Mises en avant à activer</h2>
+  <p class="text-sm text-muted">Active seulement après avoir reçu le paiement avec la bonne référence (D17 ou relevé bancaire).</p>
+  {% for b in pending %}
+    <article class="p-4 rounded-2xl border border-line flex flex-col lg:flex-row lg:items-center gap-3">
+      <div class="flex-1 min-w-0 flex flex-col">
+        <span class="font-mono font-bold text-lg">{{ b.reference }}</span>
+        <span class="text-sm"><strong>{{ b.price_tnd }} TND</strong> · {{ b.days }} jours · <a class="text-brand font-semibold" href="{{ url_for('main.listing_detail', listing_id=b.listing_id) }}">{{ b.listing.title }}</a></span>
+        <span class="text-sm text-muted">{{ b.user.full_name }} · {{ b.user.email }} · demandé {{ time_ago(b.created_at) }}</span>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <form method="post" action="{{ url_for('promote.admin_boost', boost_id=b.id, action='activer') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="{{ btn_primary }}">Paiement reçu : activer</button></form>
+        <form method="post" action="{{ url_for('promote.admin_boost', boost_id=b.id, action='refuser') }}" class="flex gap-2"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input name="note" placeholder="Motif (facultatif)" class="min-h-[36px] px-3 rounded-full border border-line text-[13px] w-40"><button class="{{ btn_danger }}">Refuser</button></form>
+      </div>
+    </article>
+  {% else %}<p class="text-muted">Aucun paiement en attente.</p>{% endfor %}
+</section>
+
+<section class="flex flex-col gap-3">
+  <h2 class="text-xl font-extrabold">Agences à valider</h2>
+  {% for u in agencies %}
+    <article class="p-4 rounded-2xl border border-line flex flex-col lg:flex-row lg:items-center gap-3">
+      <div class="flex-1 min-w-0 flex flex-col">
+        <span class="font-bold text-lg">{{ u.agency_name }} <span class="font-normal text-muted">· {{ u.agency_city }}</span></span>
+        <span class="text-sm">Matricule / RNE : <strong class="font-mono">{{ u.agency_tax_id }}</strong></span>
+        <span class="text-sm text-muted">{{ u.full_name }} · {{ u.email }} · {{ u.listings|length }} annonce(s)</span>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <form method="post" action="{{ url_for('promote.admin_agency', user_id=u.id, action='valider') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="{{ btn_primary }}">Valider</button></form>
+        <form method="post" action="{{ url_for('promote.admin_agency', user_id=u.id, action='refuser') }}" class="flex gap-2"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input name="note" placeholder="Motif (facultatif)" class="min-h-[36px] px-3 rounded-full border border-line text-[13px] w-40"><button class="{{ btn_danger }}">Refuser</button></form>
+      </div>
+    </article>
+  {% else %}<p class="text-muted">Aucune demande d'agence.</p>{% endfor %}
+</section>
+
+<section class="flex flex-col gap-3">
+  <h2 class="text-xl font-extrabold">À la une en ce moment</h2>
+  <ul class="flex flex-col divide-y divide-line border-y border-line text-[15px]">
+    {% for b in active %}<li class="py-2.5 flex flex-wrap justify-between gap-2"><a class="font-semibold hover:text-brand" href="{{ url_for('main.listing_detail', listing_id=b.listing_id) }}">{{ b.listing.title }}</a><span class="text-muted">jusqu'au {{ b.ends_at.strftime('%d/%m/%Y') }} · {{ b.reference }}</span></li>
+    {% else %}<li class="py-2.5 text-muted">Aucune annonce à la une.</li>{% endfor %}
+  </ul>
+  {% if validated %}
+  <h2 class="text-xl font-extrabold mt-4">Agences validées</h2>
+  <ul class="flex flex-col divide-y divide-line border-y border-line text-[15px]">
+    {% for u in validated %}<li class="py-2.5 flex flex-wrap items-center justify-between gap-2"><a class="font-semibold hover:text-brand" href="{{ url_for('promote.agency_page', user_id=u.id) }}">{{ u.agency_name }}</a>
+      <form method="post" action="{{ url_for('promote.admin_agency', user_id=u.id, action='retirer') }}" onsubmit="return confirm('Retirer le statut agence ?')"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="{{ btn }}">Retirer le statut</button></form></li>{% endfor %}
+  </ul>
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Mettre en avant – {{ listing.title }} – IKRILI{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 sm:px-6 py-8 flex flex-col gap-7">
+  <div class="flex flex-col gap-1">
+    <a href="{{ url_for('listings.dashboard') }}" class="self-start text-sm font-semibold text-brand mb-2">&larr; Mon espace</a>
+    <span class="text-sm font-extrabold uppercase tracking-wider text-brand">Mise en avant</span>
+    <h1 class="text-3xl sm:text-4xl font-extrabold">Passe ton annonce <span class="mark">à la une</span></h1>
+    <p class="text-muted">« {{ listing.title }} » · {{ listing.city }}</p>
+  </div>
+
+  {% if listing.is_featured %}
+    <div class="p-4 rounded-2xl bg-okbg text-ok font-semibold">Ton annonce est déjà à la une jusqu'au {{ listing.featured_until.strftime('%d/%m/%Y') }}. Une nouvelle formule prolonge cette date.</div>
+  {% endif %}
+
+  <ul class="grid gap-3 sm:grid-cols-3">
+    {% for t, d in [('En tête des résultats', 'Ton annonce apparaît avant les autres dans la recherche.'),
+                    ('Badge « À la une »', 'Un badge jaune attire l\'œil sur la carte et la liste.'),
+                    ('Mise en avant sur l\'accueil', 'Elle est proposée en premier aux nouveaux visiteurs.')] %}
+      <li class="p-4 rounded-2xl bg-slate-50 flex flex-col gap-1"><strong>{{ t }}</strong><span class="text-sm text-muted">{{ d }}</span></li>
+    {% endfor %}
+  </ul>
+
+  {% if pending %}
+    <div class="p-5 rounded-3xl bg-sun-soft flex flex-wrap items-center justify-between gap-3">
+      <span><strong>Une demande est en attente de paiement</strong> (référence <span class="font-mono font-bold">{{ pending.reference }}</span>).</span>
+      <a href="{{ url_for('promote.boost_status', reference=pending.reference) }}" class="min-h-[44px] px-5 rounded-full bg-ink text-white font-bold flex items-center">Voir comment payer</a>
+    </div>
+  {% elif not listing.is_active %}
+    <div class="p-4 rounded-2xl bg-slate-100 font-semibold">Cette annonce est masquée : remets-la en ligne pour la mettre en avant.</div>
+  {% else %}
+    <form method="post" class="flex flex-col gap-4">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <fieldset class="grid gap-3 sm:grid-cols-{{ plans|length if plans|length <= 3 else 3 }}">
+        <legend class="sr-only">Formule</legend>
+        {% for days, price in plans %}
+          <label class="relative">
+            <input type="radio" name="days" value="{{ days }}" class="peer sr-only" {% if loop.index == 2 or plans|length == 1 %}checked{% endif %} required>
+            <span class="p-5 rounded-3xl border-[1.5px] border-line flex flex-col gap-1 cursor-pointer peer-checked:border-brand peer-checked:bg-brand-soft peer-focus-visible:ring-2 peer-focus-visible:ring-brand">
+              <span class="font-display text-2xl font-extrabold">{{ days }} jours</span>
+              <span class="text-lg"><strong>{{ price }} TND</strong></span>
+              <span class="text-sm text-muted">soit {{ '%.1f'|format(price / days)|replace('.', ',') }} TND par jour</span>
+              {% if loop.index == 2 %}<span class="self-start mt-1 px-2.5 py-1 rounded-full bg-sun text-xs font-bold">Le plus choisi</span>{% endif %}
+            </span>
+          </label>
+        {% endfor %}
+      </fieldset>
+      <p class="text-sm text-muted">Tu paieras par D17 ou virement en indiquant une référence. La mise en avant démarre dès que nous recevons le paiement (en général dans la journée).</p>
+      <button class="self-start min-h-[52px] px-7 rounded-full bg-brand hover:bg-brand-dark text-white font-bold">Continuer</button>
+    </form>
+  {% endif %}
+
+  {% if history %}
+    <section class="flex flex-col gap-2">
+      <h2 class="text-lg font-extrabold">Historique</h2>
+      <ul class="flex flex-col divide-y divide-line border-y border-line text-[15px]">
+        {% for b in history %}
+          <li class="py-2.5 flex flex-wrap justify-between gap-2"><span><span class="font-mono font-bold">{{ b.reference }}</span> · {{ b.days }} jours · {{ b.price_tnd }} TND</span>
+            <span class="font-semibold">{{ {'en_attente': 'En attente de paiement', 'active': 'Active jusqu\'au ' ~ (b.ends_at.strftime('%d/%m/%Y') if b.ends_at else ''), 'expiree': 'Terminée', 'refusee': 'Refusée', 'annulee': 'Annulée'}[b.state] }}</span></li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+</div>
+{% endblock %}

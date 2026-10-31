@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% from "seo/_parts.html" import breadcrumb %}
+{% block title %}Logement étudiant en Tunisie, université par université – IKRILI{% endblock %}
+{% block meta_description %}Trouve un logement étudiant près de ta fac : ESPRIT, Sup'Com, INSAT, ENIT, FST… Annonces à pied de chaque université, colocations et loyers médians.{% endblock %}
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 sm:px-6 py-10 flex flex-col gap-6">
+  {{ breadcrumb([('Accueil', url_for('main.index')), ('Logement étudiant', None)]) }}
+  <h1 class="text-4xl sm:text-5xl font-extrabold">Logement étudiant, <span class="mark">fac par fac</span></h1>
+  <p class="text-lg text-slate-700 max-w-3xl">Choisis ton université : IKRILI te montre les logements et les colocations à pied, avec le temps de trajet pour chaque annonce.</p>
+  <ul class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    {% for u, s, n in rows %}
+      <li><a href="{{ url_for('seo.university', slug=s) }}" class="p-5 rounded-3xl border border-line flex flex-col gap-1 hover:border-ink">
+        <span class="font-display text-xl font-extrabold">Logement près de {{ u.name }}</span>
+        <span class="text-muted">{{ u.zone }}</span>
+        <span class="text-sm font-bold text-brand">{{ n }} annonce{{ 's' if n != 1 }} à pied</span></a></li>
+    {% endfor %}
+  </ul>
+</div>
+{% endblock %}

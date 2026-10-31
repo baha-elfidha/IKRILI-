@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Paiement de la mise en avant {{ b.reference }} – IKRILI{% endblock %}
+{% block content %}
+<div class="max-w-2xl mx-auto px-4 sm:px-6 py-8 flex flex-col gap-6">
+  <a href="{{ url_for('listings.dashboard') }}" class="self-start text-sm font-semibold text-brand">&larr; Mon espace</a>
+  {% set st = b.state %}
+  {% if st == 'en_attente' %}
+    <h1 class="text-3xl font-extrabold">Dernière étape : le paiement</h1>
+    <div class="p-6 rounded-3xl bg-ink text-white flex flex-col gap-3">
+      <div class="flex flex-wrap justify-between gap-3"><span class="text-white/70">Formule</span><strong>{{ b.days }} jours à la une</strong></div>
+      <div class="flex flex-wrap justify-between gap-3"><span class="text-white/70">Montant</span><strong class="text-2xl text-sun">{{ b.price_tnd }} TND</strong></div>
+      <div class="flex flex-wrap justify-between items-center gap-3"><span class="text-white/70">Référence à indiquer</span>
+        <span class="flex items-center gap-2"><strong class="font-mono text-xl tracking-wider" id="ref">{{ b.reference }}</strong>
+          <button type="button" onclick="navigator.clipboard && navigator.clipboard.writeText('{{ b.reference }}'); this.textContent='Copié'" class="min-h-[36px] px-3 rounded-full bg-white/15 text-sm font-bold">Copier</button></span></div>
+    </div>
+    {% if methods %}
+      <ol class="flex flex-col gap-3">
+        {% for name, how in methods %}
+          <li class="p-4 rounded-2xl border border-line flex gap-3"><span class="shrink-0 px-2.5 h-7 rounded-full bg-brand-soft text-brand-dark text-sm font-bold flex items-center">{{ name }}</span><span>{{ how }}</span></li>
+        {% endfor %}
+      </ol>
+      <p class="text-[15px]">Indique bien la référence <strong class="font-mono">{{ b.reference }}</strong> dans le motif du paiement. Nous activons la mise en avant dès réception et tu reçois une notification.</p>
+    {% else %}
+      <p class="p-4 rounded-2xl bg-sun-soft">Écris-nous à <a class="font-bold underline" href="mailto:{{ config['CONTACT_EMAIL'] }}?subject=Mise%20en%20avant%20{{ b.reference }}">{{ config['CONTACT_EMAIL'] }}</a> en indiquant la référence <strong class="font-mono">{{ b.reference }}</strong> : nous t'envoyons les coordonnées de paiement.</p>
+    {% endif %}
+    <form method="post" action="{{ url_for('promote.boost_cancel', reference=b.reference) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="text-sm font-semibold text-muted underline">Annuler cette demande</button>
+    </form>
+  {% elif st == 'active' %}
+    <h1 class="text-3xl font-extrabold">Ton annonce est à la une</h1>
+    <p class="p-4 rounded-2xl bg-okbg text-ok font-semibold">Jusqu'au {{ b.ends_at.strftime('%d/%m/%Y') }} · « {{ b.listing.title }} »</p>
+  {% else %}
+    <h1 class="text-3xl font-extrabold">Demande {{ b.reference }}</h1>
+    <p class="p-4 rounded-2xl bg-slate-100 font-semibold">{{ {'expiree': 'Mise en avant terminée.', 'refusee': 'Demande refusée' ~ (' : ' ~ b.note if b.note else '.'), 'annulee': 'Demande annulée.'}[st] }}</p>
+    <a href="{{ url_for('promote.boost', listing_id=b.listing_id) }}" class="self-start min-h-[48px] px-5 rounded-full bg-ink text-white font-bold flex items-center">Nouvelle mise en avant</a>
+  {% endif %}
+</div>
+{% endblock %}

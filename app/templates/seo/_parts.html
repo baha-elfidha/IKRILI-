@@ -1,0 +1,43 @@
+{% macro breadcrumb(items) %}
+<nav aria-label="Fil d'Ariane" class="text-sm text-muted">
+  <ol class="flex flex-wrap items-center gap-1.5">
+    {% for label, href in items %}
+      <li class="flex items-center gap-1.5">{% if not loop.first %}<span aria-hidden="true">/</span>{% endif %}
+        {% if href %}<a href="{{ href }}" class="hover:text-ink font-semibold">{{ label }}</a>{% else %}<span aria-current="page">{{ label }}</span>{% endif %}</li>
+    {% endfor %}
+  </ol>
+</nav>
+<script type="application/ld+json">{{ {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": breadcrumb_ld(items)}|tojson }}</script>
+{% endmacro %}
+
+{% macro faq_block(faq) %}
+{% if faq %}
+<section class="flex flex-col gap-3" aria-labelledby="t-faq">
+  <h2 id="t-faq" class="text-2xl font-extrabold">Questions fréquentes</h2>
+  <div class="flex flex-col divide-y divide-line border-y border-line">
+    {% for q, a in faq %}
+      <details class="group py-4" {% if loop.first %}open{% endif %}>
+        <summary class="list-none cursor-pointer flex items-center justify-between gap-4 font-bold text-[17px]">{{ q }}
+          <svg class="shrink-0 transition group-open:rotate-180" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary>
+        <p class="pt-2 text-slate-700 leading-relaxed">{{ a }}</p>
+      </details>
+    {% endfor %}
+  </div>
+</section>
+<script type="application/ld+json">{{ {"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": faq_ld(faq)}|tojson }}</script>
+{% endif %}
+{% endmacro %}
+
+{% macro stat_tiles(stats) %}
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+  {% for value, label in [(stats.n, 'annonces en ligne'),
+                          ((stats.median|tnd ~ ' TND') if stats.median else '—', 'loyer médian (logement entier)'),
+                          ((stats.coloc_median|tnd ~ ' TND') if stats.coloc_median else '—', 'loyer médian (colocation)'),
+                          ((stats.min|tnd ~ ' TND') if stats.min else '—', 'à partir de')] %}
+    <div class="p-4 rounded-3xl {{ 'bg-sun' if loop.first else 'bg-slate-50' }} flex flex-col gap-0.5">
+      <span class="font-display text-2xl sm:text-3xl font-extrabold">{{ value }}</span>
+      <span class="text-sm font-semibold {{ 'text-ink' if loop.first else 'text-muted' }}">{{ label }}</span>
+    </div>
+  {% endfor %}
+</div>
+{% endmacro %}

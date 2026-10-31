@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% from "_macros.html" import listing_card %}
+{% block title %}{{ agency.agency_name }} – Agence immobilière{% if agency.agency_city %} à {{ agency.agency_city }}{% endif %} – IKRILI{% endblock %}
+{% block meta_description %}{{ listings|length }} logements à louer proposés par {{ agency.agency_name }}{% if agency.agency_city %} ({{ agency.agency_city }}){% endif %} sur IKRILI.{% endblock %}
+{% block head %}<script type="application/ld+json">{{ {"@context": "https://schema.org", "@type": "RealEstateAgent", "name": agency.agency_name, "address": {"@type": "PostalAddress", "addressLocality": agency.agency_city or "", "addressCountry": "TN"}, "url": url_for('promote.agency_page', user_id=agency.id, _external=True)}|tojson }}</script>{% endblock %}
+{% block content %}
+<section class="bg-slate-50">
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 py-10 flex flex-col sm:flex-row gap-5 sm:items-center">
+    <span class="shrink-0 w-20 h-20 rounded-3xl bg-ink text-white font-display text-3xl font-extrabold flex items-center justify-center">{{ agency.agency_name[:2]|upper }}</span>
+    <div class="flex flex-col gap-1">
+      <span class="self-start px-2.5 py-1 rounded-full bg-okbg text-ok text-xs font-bold">Agence vérifiée par IKRILI</span>
+      <h1 class="text-3xl sm:text-4xl font-extrabold">{{ agency.agency_name }}</h1>
+      <p class="text-muted">{{ agency.agency_city }} · {{ listings|length }} annonce{{ 's' if listings|length != 1 }} en ligne</p>
+    </div>
+  </div>
+</section>
+<div class="max-w-6xl mx-auto px-4 sm:px-6 py-8 flex flex-col gap-8">
+  {% if agency.agency_bio %}<p class="max-w-3xl text-[17px] leading-relaxed text-slate-700 whitespace-pre-line">{{ agency.agency_bio }}</p>{% endif %}
+  {% if listings %}
+    <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">{% for l in listings %}{{ listing_card(l) }}{% endfor %}</div>
+  {% else %}
+    <p class="text-muted">Aucune annonce en ligne pour le moment.</p>
+  {% endif %}
+</div>
+{% endblock %}

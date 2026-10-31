@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% from "_macros.html" import listing_card %}
+{% from "seo/_parts.html" import breadcrumb, faq_block, stat_tiles %}
+{% block title %}Logement étudiant près de {{ u.name }} ({{ u.zone }}) – IKRILI{% endblock %}
+{% block meta_description %}{{ stats.n }} logements étudiants à louer près de {{ u.name }}{% if stats.median %}, loyer médian {{ stats.median }} TND{% endif %} : appartements, studios et colocations à pied de la fac. Annonces vérifiées.{% endblock %}
+{% block content %}
+<section class="bg-brand-soft">
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 py-10 sm:py-14 flex flex-col gap-4">
+    {{ breadcrumb([('Accueil', url_for('main.index')), ('Logement étudiant', url_for('seo.universities')), (u.name, None)]) }}
+    <h1 class="text-[34px] leading-[1.05] sm:text-5xl font-extrabold">Logement étudiant près de <span class="mark">{{ u.name }}</span></h1>
+    <p class="text-lg text-slate-700 max-w-3xl leading-relaxed">Appartements, studios et chambres en colocation à {{ radius }} minutes à pied ou moins de {{ u.name }} ({{ u.zone }}). Les distances sont calculées pour chaque annonce.</p>
+    <div class="flex flex-wrap gap-2">
+      <a href="{{ url_for('main.search', universite=u.id, minutes=20, pour='etudiants') }}" class="min-h-[48px] px-5 rounded-full bg-ink text-white font-bold flex items-center">Voir sur la carte</a>
+      <a href="{{ url_for('main.search', universite=u.id, minutes=30, coloc=1) }}" class="min-h-[48px] px-5 rounded-full bg-white font-bold flex items-center">Colocations près de {{ u.name }}</a>
+      <a href="{{ url_for('roommates.index') }}" class="min-h-[48px] px-5 rounded-full bg-white font-bold flex items-center">Trouver un colocataire</a>
+    </div>
+  </div>
+</section>
+<div class="max-w-6xl mx-auto px-4 sm:px-6 py-8 flex flex-col gap-10">
+  {{ stat_tiles(stats) }}
+  <section class="flex flex-col gap-4" aria-labelledby="t-list">
+    <h2 id="t-list" class="text-2xl font-extrabold">Logements à louer autour de {{ u.name }}</h2>
+    {% if near %}
+      <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {% for mins, l in near %}{{ listing_card(l, mins, u) }}{% endfor %}
+      </div>
+      <a href="{{ url_for('main.search', universite=u.id, minutes=radius) }}" class="self-start min-h-[48px] px-5 rounded-full border-[1.5px] border-ink font-bold flex items-center">Toutes les annonces près de {{ u.name }}</a>
+    {% else %}
+      <div class="p-6 rounded-3xl bg-slate-50 flex flex-col items-start gap-3">
+        <p class="font-bold">Pas encore d'annonce à moins de {{ radius }} minutes de {{ u.name }}.</p>
+        <p class="text-muted">Crée une alerte : tu seras prévenu dès qu'un logement est publié près de la fac.</p>
+        <a href="{{ url_for('main.search', universite=u.id, minutes=30) }}" class="min-h-[44px] px-5 rounded-full bg-ink text-white font-bold flex items-center">Créer une alerte</a>
+      </div>
+    {% endif %}
+  </section>
+  {% if nearby_areas %}
+  <section class="flex flex-col gap-3" aria-labelledby="t-areas">
+    <h2 id="t-areas" class="text-2xl font-extrabold">Quartiers autour de {{ u.name }}</h2>
+    <div class="flex flex-wrap gap-2">
+      {% for s, c, g, n in nearby_areas %}<a href="{{ url_for('seo.area', slug=s) }}" class="min-h-[44px] px-4 rounded-full border-[1.5px] border-line font-semibold text-sm flex items-center hover:border-ink">Location à {{ c }} <span class="ms-1.5 text-muted">{{ n }}</span></a>{% endfor %}
+    </div>
+  </section>
+  {% endif %}
+  {{ faq_block(faq) }}
+  <section class="flex flex-col gap-3" aria-labelledby="t-other">
+    <h2 id="t-other" class="text-xl font-extrabold">Autres universités</h2>
+    <div class="flex flex-wrap gap-2">
+      {% for o, s in others %}<a href="{{ url_for('seo.university', slug=s) }}" class="min-h-[44px] px-4 rounded-full bg-slate-100 font-semibold text-sm flex items-center hover:bg-slate-200">Logement près de {{ o.name }}</a>{% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}

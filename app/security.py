@@ -74,6 +74,9 @@ LIMITS = {
     "alert_user": (10, 3600),           # créations d'alertes de recherche
     "report_ip": (5, 3600),             # signalements par adresse IP
     "publish_user": (5, 86400),         # nouvelles annonces par jour
+    "publish_agency": (40, 86400),      # ... pour une agence validée
+    "boost_user": (6, 86400),           # demandes de mise en avant par jour
+    "agency_user": (3, 86400),          # demandes de compte agence par jour
 }
 
 

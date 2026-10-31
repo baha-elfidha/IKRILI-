@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="fr">
+<html lang="{{ page_lang }}" dir="{{ page_dir }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -8,15 +8,29 @@
   <meta name="theme-color" content="#2D4BF0">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+  <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='icons/favicon-32.png') }}">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
+  <link rel="manifest" href="{{ url_for('pwa.manifest') }}">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="IKRILI">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  {% if translatable and request.endpoint != 'pwa.offline' %}
+  <link rel="canonical" href="{{ canonical_url() }}">
+  <link rel="alternate" hreflang="fr" href="{{ canonical_url('fr') }}">
+  <link rel="alternate" hreflang="ar" href="{{ canonical_url('ar') }}">
+  <link rel="alternate" hreflang="x-default" href="{{ canonical_url('fr') }}">
+  {% endif %}
+  <meta property="og:site_name" content="IKRILI">
+  <meta property="og:locale" content="{{ 'ar_TN' if page_lang == 'ar' else 'fr_TN' }}">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800{% if page_lang == 'ar' %}&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700{% endif %}&display=swap">
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
       theme: {
         extend: {
           fontFamily: {
-            sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
-            display: ['"Bricolage Grotesque"', '"Plus Jakarta Sans"', 'system-ui', 'sans-serif']
+            sans: ['"Plus Jakarta Sans"', '"IBM Plex Sans Arabic"', 'system-ui', 'sans-serif'],
+            display: ['"Bricolage Grotesque"', '"Plus Jakarta Sans"', '"IBM Plex Sans Arabic"', 'system-ui', 'sans-serif']
           },
           colors: {
             brand: { DEFAULT: '#2D4BF0', dark: '#1E36C7', soft: '#EEF1FF', photo: '#DDE3FF' },
@@ -36,6 +50,12 @@
     /* Surlignage « marqueur » pour les mots clés des titres */
     .mark { background: linear-gradient(transparent 58%, #FFD23F 58%, #FFD23F 92%, transparent 92%); padding: 0 .08em; }
     :focus-visible { outline: 3px solid #2D4BF0; outline-offset: 2px; }
+    /* Arabe : lecture de droite à gauche */
+    [dir=rtl] h1, [dir=rtl] h2, [dir=rtl] h3 { letter-spacing: 0; font-family: "IBM Plex Sans Arabic", "Bricolage Grotesque", system-ui, sans-serif; }
+    [dir=rtl] body { line-height: 1.7; }
+    [dir=rtl] .flip-rtl, [dir=rtl] svg[data-arrow] { transform: scaleX(-1); }
+    [dir=rtl] .uppercase { text-transform: none; letter-spacing: 0; }
+    .num { unicode-bidi: isolate; direction: ltr; display: inline-block; }
   </style>
   {% block head %}{% endblock %}
 </head>
@@ -68,6 +88,7 @@
       {% else %}
         <a href="{{ url_for('auth.login') }}" class="{{ navlink }}">Connexion</a>
       {% endif %}
+      {% if translatable %}<a href="{{ lang_url('fr' if page_lang == 'ar' else 'ar') }}" hreflang="{{ 'fr' if page_lang == 'ar' else 'ar' }}" translate="no" class="{{ navlink }}" lang="{{ 'fr' if page_lang == 'ar' else 'ar' }}">{{ 'Français' if page_lang == 'ar' else 'العربية' }}</a>{% endif %}
       <a href="{{ url_for('listings.create') }}" class="ml-2 pl-3.5 pr-4 py-2.5 rounded-full bg-brand text-white hover:bg-brand-dark flex items-center gap-1.5 shadow-[0_6px_16px_-6px_rgba(45,75,240,.6)]">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
         Publier une annonce
@@ -104,6 +125,8 @@
         <a href="{{ url_for('auth.login') }}" class="{{ mlink }}">Connexion</a>
         <a href="{{ url_for('auth.register') }}" class="{{ mlink }}">Créer un compte</a>
       {% endif %}
+      <a href="{{ url_for('pwa.install_page') }}" class="{{ mlink }} flex items-center gap-2"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/></svg>Installer l'application</a>
+      {% if translatable %}<a href="{{ lang_url('fr' if page_lang == 'ar' else 'ar') }}" translate="no" lang="{{ 'fr' if page_lang == 'ar' else 'ar' }}" class="{{ mlink }}">{{ 'Français' if page_lang == 'ar' else 'العربية' }}</a>{% endif %}
       <a href="{{ url_for('listings.create') }}" class="mt-2 mb-1 px-4 py-3.5 rounded-full bg-brand text-white text-center">+ Publier une annonce</a>
     </div>
   </nav>
@@ -149,6 +172,8 @@
       <a href="{{ url_for('main.search', coloc=1) }}" class="hover:text-white">Colocation</a>
       <a href="{{ url_for('roommates.index') }}" class="hover:text-white">Trouver un colocataire</a>
       <a href="{{ url_for('insights.market') }}" class="hover:text-white">Prix des loyers</a>
+      <a href="{{ url_for('seo.universities') }}" class="hover:text-white">Logement par université</a>
+      <a href="{{ url_for('seo.areas_index') }}" class="hover:text-white">Location par quartier</a>
       <a href="{{ url_for('listings.create') }}" class="hover:text-white">Publier une annonce</a>
     </nav>
     <nav aria-label="Informations" class="flex flex-col gap-2.5">
@@ -157,6 +182,8 @@
       <a href="{{ url_for('main.terms') }}" class="hover:text-white">Conditions d'utilisation</a>
       <a href="{{ url_for('main.privacy') }}" class="hover:text-white">Confidentialité</a>
       <a href="mailto:{{ config['CONTACT_EMAIL'] }}" class="hover:text-white">Contact</a>
+      <a href="{{ url_for('pwa.install_page') }}" class="hover:text-white">Installer l'application</a>
+      {% if translatable %}<a href="{{ lang_url('fr' if page_lang == 'ar' else 'ar') }}" translate="no" lang="{{ 'fr' if page_lang == 'ar' else 'ar' }}" class="hover:text-white">{{ 'Version française' if page_lang == 'ar' else 'النسخة العربية' }}</a>{% endif %}
     </nav>
   </div>
   <div class="border-t border-white/10">
@@ -207,6 +234,28 @@
   })();
 </script>
 {% endif %}
+<script>
+  /* Application installable : service worker + bouton « Installer » */
+  (function () {
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () { navigator.serviceWorker.register('{{ url_for('pwa.service_worker') }}', { scope: '/' }).catch(function () {}); });
+    }
+    var deferred = null, standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+    function refresh() {
+      document.querySelectorAll('[data-install]').forEach(function (b) { b.hidden = !deferred; });
+      document.querySelectorAll('[data-installed]').forEach(function (b) { b.hidden = !standalone; });
+    }
+    window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); deferred = e; refresh(); });
+    window.addEventListener('appinstalled', function () { deferred = null; standalone = true; refresh(); });
+    document.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-install]');
+      if (!b || !deferred) return;
+      deferred.prompt();
+      deferred.userChoice.finally(function () { deferred = null; refresh(); });
+    });
+    refresh();
+  })();
+</script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

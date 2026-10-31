@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Installer l'application IKRILI sur ton téléphone{% endblock %}
+{% block meta_description %}Installe IKRILI sur l'écran d'accueil de ton téléphone Android ou iPhone, gratuitement et sans passer par le Play Store.{% endblock %}
+{% block content %}
+<section class="bg-brand-soft">
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-16 grid gap-8 md:grid-cols-[1fr_auto] items-center">
+    <div class="flex flex-col gap-4">
+      <h1 class="text-4xl sm:text-5xl font-extrabold leading-[1.05]">IKRILI dans ta poche, <span class="mark">sans Play Store.</span></h1>
+      <p class="text-lg text-slate-700 max-w-xl">Une icône sur l'écran d'accueil, l'ouverture en plein écran, et tes messages à portée de main. Gratuit, léger : moins de 1 Mo.</p>
+      <button type="button" data-install hidden class="self-start min-h-[52px] px-6 rounded-full bg-brand text-white font-bold flex items-center gap-2">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Installer l'application</button>
+      <p data-installed hidden class="self-start px-4 py-2.5 rounded-2xl bg-okbg text-ok font-bold">L'application est installée sur cet appareil.</p>
+    </div>
+    <img src="{{ url_for('static', filename='icons/icon-512.png') }}" alt="" width="160" height="160" class="w-32 h-32 sm:w-40 sm:h-40 rounded-[28%] shadow-xl justify-self-center">
+  </div>
+</section>
+<div class="max-w-6xl mx-auto px-4 sm:px-6 py-10 grid gap-5 md:grid-cols-2">
+  {% for title, steps in [('Sur Android (Chrome)', ["Ouvre ikrili.onrender.com dans Chrome.", "Touche le bouton « Installer l'application » ci-dessus, ou le menu ⋮ puis « Installer l'application ».", "Confirme : l'icône IKRILI apparaît sur ton écran d'accueil."]),
+                          ('Sur iPhone (Safari)', ["Ouvre ikrili.onrender.com dans Safari.", "Touche le bouton Partager (le carré avec une flèche vers le haut).", "Choisis « Sur l'écran d'accueil », puis « Ajouter »."])] %}
+    <section class="p-6 rounded-3xl border border-line flex flex-col gap-4">
+      <h2 class="text-xl font-extrabold">{{ title }}</h2>
+      <ol class="flex flex-col gap-3">
+        {% for s in steps %}<li class="flex gap-3"><span class="shrink-0 w-7 h-7 rounded-full bg-sun font-extrabold text-sm flex items-center justify-center">{{ loop.index }}</span><span class="pt-0.5">{{ s }}</span></li>{% endfor %}
+      </ol>
+    </section>
+  {% endfor %}
+</div>
+{% endblock %}

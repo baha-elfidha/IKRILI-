@@ -3,6 +3,7 @@
 {% block title %}{{ listing.title }} – {{ listing.city }} – IKRILI{% endblock %}
 {% block meta_description %}{{ listing.title }} à {{ listing.city }} ({{ listing.governorate }}), {{ listing.price_tnd|tnd }} TND par mois.{% endblock %}
 {% block head %}
+  <script type="application/ld+json">{{ listing_ld(listing)|tojson }}</script>
   {% if approx %}<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">{% endif %}
   <meta property="og:title" content="{{ listing.title }} – {{ listing.price_tnd|tnd }} TND/mois">
   <meta property="og:description" content="{{ listing.city }}, {{ listing.governorate }} · sur IKRILI">
@@ -296,6 +297,7 @@
           <span class="w-11 h-11 rounded-full bg-[#D6DDFF] flex items-center justify-center font-extrabold text-brand-dark">{{ listing.owner.initials }}</span>
           <div class="flex flex-col">
             <span class="font-bold text-[15px]">{{ listing.owner.full_name }}</span>
+            {% if listing.owner.is_agency %}<a href="{{ url_for('promote.agency_page', user_id=listing.owner_id) }}" class="text-[13px] font-bold text-brand">Agence : {{ listing.owner.agency_name }}</a>{% endif %}
             {% if listing.owner.is_verified %}<span class="text-[13px] font-semibold text-ok">Identité vérifiée</span>{% else %}<span class="text-[13px] text-muted">Identité non vérifiée</span>{% endif %}
             {% if owner_rating[1] %}<span class="flex items-center gap-1.5 text-[13px] text-muted">{{ stars(owner_rating[0], 13) }} {{ ('%.1f' % owner_rating[0])|replace('.', ',') }} · {{ owner_rating[1] }} avis</span>{% endif %}
           </div>

@@ -48,3 +48,13 @@ class Config:
 
     # Un compte doit avoir au moins ce nombre d'heures pour voir le téléphone des propriétaires
     PHONE_MIN_ACCOUNT_HOURS = 24
+
+    # ------------------------------------------------------------------ revenus (paiement manuel)
+    # Formules de mise en avant « jours:prix_TND », séparées par des virgules
+    BOOST_PLANS = os.environ.get("BOOST_PLANS", "7:15,15:25,30:45")
+    # Coordonnées de paiement affichées au propriétaire (laisser vide pour masquer un moyen)
+    PAY_D17 = os.environ.get("PAY_D17", "")            # numéro de téléphone lié au compte D17
+    PAY_RIB = os.environ.get("PAY_RIB", "")            # RIB pour un virement bancaire ou postal
+    PAY_HOLDER = os.environ.get("PAY_HOLDER", "")      # nom du titulaire
+    # Prix de l'offre agence par mois (0 = gratuite pendant le lancement)
+    AGENCY_MONTHLY_TND = int(os.environ.get("AGENCY_MONTHLY_TND", "0") or 0)

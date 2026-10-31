@@ -68,7 +68,8 @@ def walking_minutes(km):
 
 def format_price(value):
     try:
-        return f"{int(value):,}".replace(",", " ")
+        # Espace insécable : le nombre reste groupé, y compris en arabe (lecture de droite à gauche)
+        return f"{int(value):,}".replace(",", "\u00a0")
     except (TypeError, ValueError):
         return value
 

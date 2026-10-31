@@ -89,7 +89,8 @@ def create():
         return redirect(url_for("auth.verify_pending"))
     listing = Listing()
     if request.method == "POST":
-        if limited("publish_user", current_user.id) and not current_user.is_admin:
+        quota = "publish_agency" if current_user.is_agency else "publish_user"
+        if limited(quota, current_user.id) and not current_user.is_admin:
             flash("Tu as publié beaucoup d'annonces aujourd'hui. Réessaie demain ou contacte-nous.", "error")
             return redirect(url_for("listings.dashboard"))
         listing.owner_id = current_user.id
@@ -101,7 +102,7 @@ def create():
         else:
             db.session.add(listing)
             _save_photos(listing)
-            hit("publish_user", current_user.id)
+            hit(quota, current_user.id)
             if current_user.role == "locataire":
                 current_user.role = "proprietaire"
             db.session.commit()
