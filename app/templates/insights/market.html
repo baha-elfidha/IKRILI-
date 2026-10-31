@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}Prix des loyers en Tunisie – Tableau de bord du marché – IKRILI{% endblock %}
+{% block meta_description %}Loyers médians par quartier et autour de chaque université en Tunisie, calculés sur les annonces IKRILI.{% endblock %}
+{% block content %}
+{% macro bars(items, label_fn) %}
+  <ul class="flex flex-col gap-2.5">
+    {% for k, s in items %}
+      <li class="grid grid-cols-[minmax(0,9rem)_1fr_auto] sm:grid-cols-[minmax(0,14rem)_1fr_auto] items-center gap-3">
+        <span class="text-sm font-semibold truncate" title="{{ label_fn(k) }}">{{ label_fn(k) }}</span>
+        <span class="h-7 rounded-lg bg-slate-100 overflow-hidden"><span class="block h-full rounded-lg {{ 'bg-brand' if loop.first else 'bg-brand/60' }}" style="width: {{ (s.median / bar_max * 100)|round(1) }}%"></span></span>
+        <span class="text-sm whitespace-nowrap"><strong>{{ s.median|tnd }}</strong> <span class="text-muted">TND · {{ s.n }}</span></span>
+      </li>
+    {% endfor %}
+  </ul>
+{% endmacro %}
+{% macro plain(k) %}{{ k }}{% endmacro %}
+{% macro uni(u) %}{{ u.name }} ({{ u.zone }}){% endmacro %}
+
+<section class="bg-ink text-white">
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 py-10 sm:py-14 flex flex-col gap-5">
+    <span class="self-start px-3 py-1.5 rounded-full bg-white/10 text-[13px] font-bold">Données IKRILI · mises à jour en continu</span>
+    <h1 class="text-4xl sm:text-5xl font-extrabold leading-[1.05]">Le marché des loyers, <span class="text-sun">en clair.</span></h1>
+    <p class="text-lg text-white/75 max-w-2xl">Loyers médians par quartier et autour de chaque université, calculés sur les annonces publiées sur IKRILI.</p>
+    <form method="get" class="flex flex-wrap gap-2" aria-label="Filtres">
+      <label class="sr-only" for="f-type">Type de logement</label>
+      <select id="f-type" name="type" onchange="this.form.submit()" class="min-h-[44px] px-4 rounded-full bg-white text-ink font-semibold text-sm">
+        <option value="">Tous les types</option>
+        {% for v, label in property_types %}<option value="{{ v }}" {% if ptype == v %}selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
+      {% for v, label in [('', 'Logement entier'), ('1', 'Colocation')] %}
+        <a href="{{ url_for('insights.market', type=ptype or None, coloc=v or None) }}" class="min-h-[44px] px-4 rounded-full text-sm font-semibold flex items-center {{ 'bg-sun text-ink' if (v == '1') == coloc else 'bg-white/10 hover:bg-white/20' }}">{{ label }}</a>
+      {% endfor %}
+      <noscript><button class="min-h-[44px] px-4 rounded-full bg-white text-ink font-semibold text-sm">Filtrer</button></noscript>
+    </form>
+  </div>
+</section>
+
+<div class="max-w-6xl mx-auto px-4 sm:px-6 py-8 flex flex-col gap-7">
+  {% if overall %}
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      {% for n, label in [(overall.median|tnd ~ ' TND', 'Loyer médian'), (overall.min|tnd ~ ' – ' ~ overall.max|tnd, 'Fourchette (TND)'),
+                          ((per_m2 ~ ' TND') if per_m2 else '—', 'Médiane au m²'), (total, 'Annonces analysées')] %}
+        <div class="p-4 rounded-3xl {{ 'bg-sun' if loop.first else 'bg-slate-50' }} flex flex-col gap-0.5">
+          <span class="font-display text-2xl sm:text-3xl font-extrabold">{{ n }}</span>
+          <span class="text-sm font-semibold {{ 'text-ink' if loop.first else 'text-muted' }}">{{ label }}</span>
+        </div>
+      {% endfor %}
+    </div>
+
+    <div class="grid gap-5 lg:grid-cols-2">
+      <section class="p-5 sm:p-6 rounded-3xl border border-line flex flex-col gap-4" aria-labelledby="t-city">
+        <div><h2 id="t-city" class="text-xl font-extrabold">Par quartier</h2><p class="text-sm text-muted">Loyer médian · nombre d'annonces</p></div>
+        {% if by_city %}{{ bars(by_city, plain) }}{% else %}<p class="text-muted">Pas encore assez d'annonces par quartier.</p>{% endif %}
+      </section>
+      <section class="p-5 sm:p-6 rounded-3xl border border-line flex flex-col gap-4" aria-labelledby="t-uni">
+        <div><h2 id="t-uni" class="text-xl font-extrabold">Autour des universités</h2><p class="text-sm text-muted">Logements à 20 minutes à pied ou moins</p></div>
+        {% if by_uni %}{{ bars(by_uni, uni) }}{% else %}<p class="text-muted">Pas encore assez d'annonces localisées près des universités.</p>{% endif %}
+      </section>
+    </div>
+
+    <div class="grid gap-5 lg:grid-cols-[1.3fr_1fr]">
+      <section class="p-5 sm:p-6 rounded-3xl border border-line flex flex-col gap-4" aria-labelledby="t-hist">
+        <div><h2 id="t-hist" class="text-xl font-extrabold">Répartition des loyers</h2><p class="text-sm text-muted">Nombre d'annonces par tranche de loyer (TND)</p></div>
+        <div class="flex items-end gap-1.5 h-48" role="img" aria-label="Histogramme des loyers">
+          {% for a, b, n in hist %}
+            <div class="flex-1 h-full flex flex-col justify-end items-center gap-1">
+              <span class="text-xs font-bold">{{ n or '' }}</span>
+              <div class="w-full rounded-t-lg bg-pop" style="height: {{ (n / hist_max * 100)|round(1) }}%; min-height: {{ '3px' if n else '0' }}"></div>
+            </div>
+          {% endfor %}
+        </div>
+        <div class="flex gap-1.5">
+          {% for a, b, n in hist %}<span class="flex-1 text-center text-[11px] text-muted">{{ a }}</span>{% endfor %}
+        </div>
+      </section>
+      <section class="p-5 sm:p-6 rounded-3xl border border-line flex flex-col gap-4" aria-labelledby="t-typo">
+        <h2 id="t-typo" class="text-xl font-extrabold">Par typologie</h2>
+        {% if by_typology %}
+          <table class="w-full text-[15px]">
+            <thead><tr class="text-left text-sm text-muted"><th class="py-2 font-semibold">Type</th><th class="py-2 font-semibold">Médian</th><th class="py-2 font-semibold">Moyen</th><th class="py-2 font-semibold text-right">Annonces</th></tr></thead>
+            <tbody class="divide-y divide-line">
+              {% for k, s in by_typology %}<tr><td class="py-2.5 font-bold">{{ k }}</td><td class="py-2.5">{{ s.median|tnd }}</td><td class="py-2.5 text-muted">{{ s.avg|tnd }}</td><td class="py-2.5 text-right">{{ s.n }}</td></tr>{% endfor %}
+            </tbody>
+          </table>
+        {% else %}<p class="text-muted">Pas encore assez d'annonces par typologie (S+1, S+2…).</p>{% endif %}
+        {% if by_gov %}
+          <h3 class="font-extrabold mt-2">Par gouvernorat</h3>
+          <ul class="flex flex-col divide-y divide-line text-[15px]">
+            {% for k, s in by_gov %}<li class="py-2 flex justify-between"><span>{{ k }}</span><span><strong>{{ s.median|tnd }} TND</strong> <span class="text-muted text-sm">· {{ s.n }}</span></span></li>{% endfor %}
+          </ul>
+        {% endif %}
+      </section>
+    </div>
+  {% else %}
+    <div class="p-8 rounded-3xl bg-slate-50 flex flex-col items-start gap-3">
+      <p class="font-bold text-lg">Pas encore assez d'annonces pour ce filtre.</p>
+      <p class="text-muted">Il faut au moins {{ min_group }} annonces pour calculer des statistiques fiables. Essaie un autre type de logement.</p>
+      <a href="{{ url_for('insights.market') }}" class="min-h-[44px] px-5 rounded-full bg-ink text-white font-bold flex items-center">Voir tout le marché</a>
+    </div>
+  {% endif %}
+
+  <section class="p-5 sm:p-6 rounded-3xl bg-brand-soft flex flex-col gap-2" aria-labelledby="t-method">
+    <h2 id="t-method" class="text-lg font-extrabold">Méthode</h2>
+    <p class="text-[15px] text-slate-700 leading-relaxed">
+      Les chiffres utilisent la <strong>médiane</strong>, moins sensible aux annonces extrêmes que la moyenne. Un groupe n'est affiché qu'à partir de {{ min_group }} annonces.
+      L'estimation du juste prix compare chaque logement à ses voisins les plus proches (distance, surface, pièces, type, meublé, équipements){% if quality.ridge %}, combinée à un modèle de régression entraîné sur toutes les annonces{% endif %}.
+      {% if quality.mdape is not none %}Testée sur {{ quality.n }} annonces, l'erreur médiane de l'estimation est de <strong>{{ quality.mdape }} %</strong>.{% endif %}
+    </p>
+    <p class="text-sm text-muted">Ce sont des loyers demandés dans les annonces, pas des loyers signés. Indication, pas expertise.</p>
+  </section>
+</div>
+{% endblock %}

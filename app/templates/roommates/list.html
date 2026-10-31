@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Colocataires compatibles – IKRILI{% endblock %}
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 sm:px-6 py-8 flex flex-col gap-6">
+  <div class="flex flex-wrap items-end justify-between gap-4">
+    <div class="flex flex-col gap-1">
+      <span class="text-sm font-extrabold uppercase tracking-wider text-brand">Colocation</span>
+      <h1 class="text-3xl sm:text-4xl font-extrabold">Tes colocataires compatibles</h1>
+      <p class="text-muted">Classés par score de compatibilité avec ton profil.</p>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <a href="{{ url_for('roommates.profile') }}" class="min-h-[44px] px-4 rounded-full border-[1.5px] border-line font-semibold text-sm flex items-center hover:border-ink">Modifier mon profil</a>
+      <form method="post" action="{{ url_for('roommates.profile_action', action='pause') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="min-h-[44px] px-4 rounded-full border-[1.5px] border-line font-semibold text-sm hover:border-ink">{{ 'Masquer mon profil' if me.is_active else 'Rendre mon profil visible' }}</button>
+      </form>
+      <a href="{{ url_for('main.search', coloc=1) }}" class="min-h-[44px] px-4 rounded-full bg-ink text-white font-semibold text-sm flex items-center">Chambres en colocation</a>
+    </div>
+  </div>
+
+  {% if not me.is_active %}
+    <div class="p-4 rounded-2xl bg-sun-soft text-[15px]"><strong>Ton profil est masqué.</strong> Les autres ne te voient plus et tu ne peux pas les contacter. Rends-le visible pour reprendre ta recherche.</div>
+  {% endif %}
+
+  <div class="flex flex-wrap gap-2" aria-label="Filtrer par score">
+    {% for v, label in [(0, 'Tous'), (60, '60 % et +'), (75, '75 % et +')] %}
+      <a href="{{ url_for('roommates.index', min=v or None) }}" class="min-h-[40px] px-4 rounded-full text-sm font-semibold flex items-center border-[1.5px] {{ 'bg-ink border-ink text-white' if min_score == v else 'border-[#D9DDEA] hover:border-ink' }}">{{ label }}</a>
+    {% endfor %}
+  </div>
+
+  {% if matches %}
+    <div class="grid gap-4 md:grid-cols-2">
+      {% for score, p, good, warn in matches %}
+        {% set u = p.user %}
+        {% set ring = 'bg-okbg text-ok' if score >= 75 else ('bg-sun-soft text-ink' if score >= 55 else 'bg-slate-100 text-slate-700') %}
+        <article class="p-5 rounded-3xl border border-line flex flex-col gap-4">
+          <div class="flex items-start gap-4">
+            <span class="shrink-0 w-14 h-14 rounded-2xl bg-brand-soft text-brand-dark font-display text-xl font-extrabold flex items-center justify-center">{{ u.full_name.split()[0][0] }}</span>
+            <div class="flex-1 min-w-0 flex flex-col">
+              <h2 class="text-xl font-extrabold leading-tight">{{ u.full_name.split()[0] }}{% if u.is_verified %} <span class="text-xs font-bold text-ok align-middle">· vérifié·e</span>{% endif %}</h2>
+              <span class="text-sm text-muted">{{ p.studies or ('Étudiant·e à ' ~ p.university.name if p.university else 'Recherche une colocation') }}</span>
+            </div>
+            <span class="shrink-0 flex flex-col items-center px-3 py-2 rounded-2xl {{ ring }}" aria-label="Compatibilité {{ score }} %">
+              <span class="font-display text-2xl font-extrabold leading-none">{{ score }}<span class="text-sm">%</span></span>
+              <span class="text-[11px] font-bold">compatible</span>
+            </span>
+          </div>
+          <div class="flex flex-wrap gap-1.5 text-xs font-semibold">
+            <span class="px-2.5 py-1 rounded-full bg-slate-100">{{ 'A un logement' if p.situation == 'a_logement' else 'Cherche un logement' }}</span>
+            <span class="px-2.5 py-1 rounded-full bg-slate-100">max {{ p.budget_max|tnd }} TND</span>
+            {% if p.university %}<span class="px-2.5 py-1 rounded-full bg-slate-100">{{ p.university.name }}</span>{% endif %}
+            {% if p.city or p.governorate %}<span class="px-2.5 py-1 rounded-full bg-slate-100">{{ p.city or p.governorate }}</span>{% endif %}
+            {% if p.move_in %}<span class="px-2.5 py-1 rounded-full bg-slate-100">dès le {{ p.move_in.strftime('%d/%m') }}</span>{% endif %}
+            <span class="px-2.5 py-1 rounded-full bg-slate-100">{{ labels.rhythm.get(p.rhythm) }}</span>
+            <span class="px-2.5 py-1 rounded-full bg-slate-100">{{ 'Fumeur·se' if p.smoker else 'Non-fumeur·se' }}</span>
+          </div>
+          {% if p.bio %}<p class="text-[15px] leading-relaxed text-slate-700 line-clamp-3">{{ p.bio }}</p>{% endif %}
+          <ul class="flex flex-col gap-1 text-sm">
+            {% for g in good %}<li class="flex items-center gap-2 text-ok"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>{{ g }}</li>{% endfor %}
+            {% for w in warn %}<li class="flex items-center gap-2 text-warn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 8v5M12 16.5v.5"/><circle cx="12" cy="12" r="9"/></svg>{{ w }}</li>{% endfor %}
+          </ul>
+          {% set c = convs.get(u.id) %}
+          {% if c %}
+            <a href="{{ url_for('messages.thread', conv_id=c.id) }}" class="min-h-[48px] rounded-full border-[1.5px] border-ink font-bold flex items-center justify-center">Voir la conversation</a>
+          {% elif me.is_active %}
+            <details class="group">
+              <summary class="list-none min-h-[48px] rounded-full bg-ink text-white font-bold flex items-center justify-center cursor-pointer">Envoyer un message</summary>
+              <form method="post" action="{{ url_for('roommates.contact', profile_id=p.id) }}" class="pt-3 flex flex-col gap-2">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <label for="m{{ p.id }}" class="sr-only">Ton message</label>
+                <textarea id="m{{ p.id }}" name="body" rows="3" required maxlength="1000" class="px-3.5 py-3 rounded-2xl border-[1.5px] border-[#D9DDEA] text-[15px]">Salut {{ u.full_name.split()[0] }} ! J'ai vu ton profil sur IKRILI, on a l'air compatibles pour une colocation. Tu cherches toujours ?</textarea>
+                <button class="self-end min-h-[44px] px-5 rounded-full bg-brand text-white font-bold">Envoyer</button>
+              </form>
+            </details>
+          {% endif %}
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="p-8 rounded-3xl bg-slate-50 flex flex-col items-start gap-3">
+      <p class="font-bold text-lg">Pas encore de profil compatible.</p>
+      <p class="text-muted">De nouveaux profils arrivent chaque jour. Élargis ton budget ou ta zone, ou reviens dans quelques jours.</p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

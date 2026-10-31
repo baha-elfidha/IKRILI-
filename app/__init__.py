@@ -36,13 +36,15 @@ def create_app(config_class=Config):
     from app.alerts import bp as alerts_bp
     from app.visits import bp as visits_bp
     from app.reviews import bp as reviews_bp
+    from app.insights import bp as insights_bp
+    from app.roommates import bp as roommates_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
     app.register_blueprint(listings_bp)
     app.register_blueprint(notifications_bp)
     app.register_blueprint(admin_bp)
-    for extra in (messages_bp, alerts_bp, visits_bp, reviews_bp):
+    for extra in (messages_bp, alerts_bp, visits_bp, reviews_bp, insights_bp, roommates_bp):
         app.register_blueprint(extra)
 
     from app import cli

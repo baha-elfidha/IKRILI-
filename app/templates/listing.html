@@ -96,6 +96,8 @@
           {{ listing.city }}, {{ listing.governorate }}{% if listing.floor %} · {{ listing.floor }}{% endif %}
         </p>
         <p class="sm:hidden text-2xl font-extrabold">{{ listing.price_tnd|tnd }} <span class="text-[15px] font-medium text-muted">TND / mois</span></p>
+        {% if price_verdict %}<span class="sm:hidden self-start px-3 py-1.5 rounded-full text-[13px] font-bold {{ price_verdict.css }}">{{ price_verdict.label }}</span>{% endif %}
+        {% if is_owner %}<a href="{{ url_for('insights.listing_stats', listing_id=listing.id) }}" class="self-start font-semibold text-brand">Voir les statistiques de l'annonce</a>{% endif %}
         {% if is_owner %}
           <a href="{{ url_for('listings.edit', listing_id=listing.id) }}" class="self-start font-semibold text-brand">Modifier mon annonce</a>
         {% endif %}
@@ -277,6 +279,18 @@
           <span class="text-3xl font-extrabold">{{ listing.price_tnd|tnd }} <span class="text-[15px] font-medium text-muted">TND / mois</span></span>
           {% if listing.charges_info %}<p class="text-sm text-muted mt-1">{{ listing.charges_info }}</p>{% endif %}
         </div>
+        {% if est %}
+          <details id="juste-prix" class="-mt-1 rounded-xl bg-slate-50 p-3.5 group">
+            <summary class="list-none cursor-pointer flex items-center justify-between gap-3">
+              <span class="flex flex-col gap-1">
+                {% if price_verdict %}<span class="self-start px-2.5 py-1 rounded-full text-xs font-bold {{ price_verdict.css }}">{{ price_verdict.label }}</span>{% endif %}
+                <span class="text-sm text-muted">Juste prix estimé : <strong class="text-ink whitespace-nowrap">{{ est.low|tnd }} – {{ est.high|tnd }} TND</strong></span>
+              </span>
+              <svg class="shrink-0 transition group-open:rotate-180" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+            </summary>
+            <p class="pt-2 text-sm text-muted leading-relaxed">Estimation IKRILI calculée sur {{ est.n }} logements comparables (quartier, surface, pièces, type, meublé, équipements). {% if price_verdict %}{{ price_verdict.hint }}.{% endif %} <a href="{{ url_for('insights.market') }}" class="font-semibold text-brand">Voir les prix du marché</a></p>
+          </details>
+        {% endif %}
 
         <div class="flex items-center gap-3 p-3.5 rounded-xl bg-slate-50">
           <span class="w-11 h-11 rounded-full bg-[#D6DDFF] flex items-center justify-center font-extrabold text-brand-dark">{{ listing.owner.initials }}</span>

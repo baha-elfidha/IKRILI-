@@ -79,6 +79,11 @@
           <input type="date" name="available_from" value="{{ val('available_from', listing.available_from.isoformat() if listing.available_from else '') }}" class="{{ input }}">
         </label>
       </div>
+      <div data-estimate class="hidden p-4 rounded-2xl bg-slate-50 flex-col gap-1.5" aria-live="polite">
+        <span class="flex flex-wrap items-center gap-2"><span class="text-sm font-bold">Juste prix estimé</span><span data-est-badge class="hidden px-2.5 py-1 rounded-full text-xs font-bold"></span></span>
+        <span class="text-[15px]"><strong data-est-range class="text-lg"></strong> <span class="text-muted">TND / mois</span></span>
+        <span data-est-note class="text-sm text-muted"></span>
+      </div>
       <label class="{{ lbl }}">Charges
         <input name="charges_info" value="{{ val('charges_info', listing.charges_info or '') }}" class="{{ input }}" placeholder="Ex. eau et syndic inclus, électricité en sus">
       </label>
@@ -169,6 +174,11 @@
           </div>
         </div>
       </div>
+      <div data-estimate class="hidden p-4 rounded-2xl bg-slate-50 flex-col gap-1.5" aria-live="polite">
+        <span class="flex flex-wrap items-center gap-2"><span class="text-sm font-bold">Juste prix estimé</span><span data-est-badge class="hidden px-2.5 py-1 rounded-full text-xs font-bold"></span></span>
+        <span class="text-[15px]"><strong data-est-range class="text-lg"></strong> <span class="text-muted">TND / mois</span></span>
+        <span data-est-note class="text-sm text-muted"></span>
+      </div>
     </fieldset>
 
     {# Navigation #}
@@ -251,7 +261,7 @@
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(map);
     var marker = lat.value ? L.marker(start).addTo(map) : null;
     map.on('click', function (e) {
-      lat.value = e.latlng.lat.toFixed(6); lng.value = e.latlng.lng.toFixed(6);
+      lat.value = e.latlng.lat.toFixed(6); lng.value = e.latlng.lng.toFixed(6); form.dispatchEvent(new Event('change'));
       if (marker) marker.setLatLng(e.latlng); else marker = L.marker(e.latlng).addTo(map);
       document.getElementById('picker-hint').textContent = 'Position enregistrée. Tu peux la déplacer en touchant ailleurs.';
     });
@@ -307,6 +317,36 @@
     if (first) document.getElementById('preview-img').style.backgroundImage = 'url(' + first.src + ')';
   }
   form.addEventListener('input', updPreview);
+
+  /* ---------- Estimation du juste prix ---------- */
+  var estTimer, estCss = { bon_plan: 'bg-okbg text-ok', moyenne: 'bg-brand-soft text-brand-dark', eleve: 'bg-pop-soft text-warn' };
+  var fmt = function (n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); };
+  function estimate() {
+    var fd = new FormData(form);
+    fd.delete('photos');
+    {% if editing %}fd.append('listing_id', '{{ listing.id }}');{% endif %}
+    if (!fd.get('governorate') && !fd.get('latitude')) return;
+    fetch('{{ url_for('insights.price_estimate') }}', { method: 'POST', body: fd })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        form.querySelectorAll('[data-estimate]').forEach(function (el) {
+          if (!d || !d.ok) { el.classList.add('hidden'); el.classList.remove('flex'); return; }
+          el.classList.remove('hidden'); el.classList.add('flex');
+          el.querySelector('[data-est-range]').textContent = fmt(d.low) + ' – ' + fmt(d.high);
+          var badge = el.querySelector('[data-est-badge]');
+          badge.className = 'px-2.5 py-1 rounded-full text-xs font-bold ' + (d.verdict_key ? estCss[d.verdict_key] : 'hidden');
+          badge.textContent = d.verdict || '';
+          el.querySelector('[data-est-note]').textContent = 'D\'après ' + d.n + ' logements comparables publiés sur IKRILI.' +
+            (d.verdict_key === 'eleve' ? ' Un loyer dans la fourchette attire plus de demandes.' : '');
+        });
+      }).catch(function () {});
+  }
+  form.addEventListener('input', function (e) {
+    if (e.target.type === 'file' || e.target.name === 'description' || e.target.name === 'title') return;
+    clearTimeout(estTimer); estTimer = setTimeout(estimate, 500);
+  });
+  form.addEventListener('change', function () { clearTimeout(estTimer); estTimer = setTimeout(estimate, 300); });
+  estimate();
 
   show(0);
 })();

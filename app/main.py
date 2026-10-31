@@ -126,13 +126,17 @@ def listing_detail(listing_id):
         conv = Conversation.query.filter_by(listing_id=listing.id, tenant_id=current_user.id).first()
         now = now_tn()
         my_booking = next((s for s in listing.slots if s.booked_by_id == current_user.id and s.start_at > now), None)
+    from app.insights import record_view
+    from app import pricing
+    record_view(listing)
+    est, price_verdict = pricing.for_listing(listing)
     slot_days = {}
     for slot in listing.future_slots()[:40]:
         slot_days.setdefault(slot.start_at.date(), []).append(slot)
     return render_template("listing.html", listing=listing, nearby=nearby[:4], is_fav=is_fav,
                            approx=approx_coords(listing), conv=conv, my_booking=my_booking,
                            slot_days=sorted(slot_days.items())[:7],
-                           owner_rating=listing.owner.owner_rating)
+                           owner_rating=listing.owner.owner_rating, est=est, price_verdict=price_verdict)
 
 
 @bp.route("/annonce/<int:listing_id>/contact", methods=["POST"])

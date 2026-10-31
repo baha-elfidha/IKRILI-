@@ -10,11 +10,12 @@
     <span class="w-10 h-10 rounded-full bg-brand-soft text-brand-dark font-extrabold flex items-center justify-center shrink-0 text-sm">{{ other.initials }}</span>
     <div class="flex-1 min-w-0 flex flex-col">
       <h1 class="text-lg font-extrabold leading-tight truncate">{{ other.full_name }}</h1>
-      <span class="text-xs text-muted">{{ 'Propriétaire' if other.id == conv.owner_id else 'Locataire' }}{% if other.is_verified %} · <span class="text-ok font-semibold">identité vérifiée</span>{% endif %}</span>
+      <span class="text-xs text-muted">{{ ('Propriétaire' if other.id == conv.owner_id else 'Locataire') if l else 'Futur·e colocataire' }}{% if other.is_verified %} · <span class="text-ok font-semibold">identité vérifiée</span>{% endif %}</span>
     </div>
   </div>
 
-  {# Annonce concernée #}
+  {# Annonce concernée (ou colocation) #}
+  {% if l %}
   <a href="{{ url_for('main.listing_detail', listing_id=l.id) }}" class="flex items-center gap-3 p-2.5 rounded-2xl border border-line hover:border-ink">
     {% if l.cover %}<img src="{{ l.cover.thumb }}" alt="" class="w-14 h-12 rounded-xl object-cover shrink-0">{% else %}<span class="w-14 h-12 rounded-xl bg-brand-photo shrink-0"></span>{% endif %}
     <span class="flex-1 min-w-0 flex flex-col">
@@ -22,6 +23,12 @@
       <span class="text-xs text-muted">{{ l.city }} · <strong class="text-ink">{{ l.price_tnd|tnd }} TND</strong> / mois{% if not l.is_active %} · <span class="text-warn font-semibold">plus disponible</span>{% endif %}</span>
     </span>
   </a>
+  {% else %}
+  <div class="p-3 rounded-2xl bg-sun-soft text-[15px] flex items-center gap-2.5">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="3"/><circle cx="16" cy="9" r="2.5"/><path d="M2 20c0-3.3 2.7-6 6-6s6 2.7 6 6M14 20c0-2.2 1.3-4.5 3-4.5s4 2 4 4.5"/></svg>
+    <span>Mise en relation <strong>colocation</strong>. Ne partage pas ton adresse ni d'argent avant de vous être rencontrés.</span>
+  </div>
+  {% endif %}
 
   {# Visites #}
   {% for s in booked %}

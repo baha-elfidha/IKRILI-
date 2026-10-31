@@ -36,6 +36,31 @@ def ensure_schema(db):
                 if default is not None:
                     ddl += f" DEFAULT {default}"
                 conn.execute(text(ddl))
+        # Les conversations entre colocataires n'ont pas d'annonce : la colonne doit accepter NULL
+        if db.engine.dialect.name == "sqlite" and "conversation" in tables:
+            _sqlite_conversation_nullable(conn)
+        if db.engine.dialect.name == "postgresql" and "conversation" in tables:
+            col = next((c for c in insp.get_columns("conversation") if c["name"] == "listing_id"), None)
+            if col and not col["nullable"]:
+                conn.execute(text("ALTER TABLE conversation ALTER COLUMN listing_id DROP NOT NULL"))
+
+
+def _sqlite_conversation_nullable(conn):
+    """SQLite ne sait pas retirer un NOT NULL : on reconstruit la table (base locale de développement)."""
+    cols = conn.execute(text("PRAGMA table_info(conversation)")).fetchall()
+    if not any(c[1] == "listing_id" and c[3] for c in cols):
+        return
+    from app.models import Conversation
+    names = ", ".join(c[1] for c in cols)
+    conn.execute(text("PRAGMA legacy_alter_table=ON"))  # garde les références de la table message intactes
+    for idx in conn.execute(text("PRAGMA index_list(conversation)")).fetchall():
+        if idx[3] == "c":
+            conn.execute(text(f'DROP INDEX "{idx[1]}"'))
+    conn.execute(text("ALTER TABLE conversation RENAME TO conversation_old"))
+    Conversation.__table__.create(conn)
+    conn.execute(text(f"INSERT INTO conversation ({names}) SELECT {names} FROM conversation_old"))
+    conn.execute(text("DROP TABLE conversation_old"))
+    conn.execute(text("PRAGMA legacy_alter_table=OFF"))
 
 
 def backfill_conversations(db):

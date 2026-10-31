@@ -105,6 +105,8 @@ def create():
             if current_user.role == "locataire":
                 current_user.role = "proprietaire"
             db.session.commit()
+            from app import pricing
+            pricing.invalidate()
             from app.alerts import trigger_alerts
             try:
                 n = trigger_alerts(listing)
@@ -134,6 +136,8 @@ def edit(listing_id):
         else:
             _save_photos(listing)
             db.session.commit()
+            from app import pricing
+            pricing.invalidate()
             flash("Annonce mise à jour.", "success")
             return redirect(url_for("main.listing_detail", listing_id=listing.id))
     return render_template("listing_form.html", listing=listing, form=request.form,
@@ -202,8 +206,17 @@ def dashboard():
     tab = request.args.get("onglet", "demandes" if stats["new"] else "annonces")
     from app.models import Conversation
     convs = {(c.listing_id, c.tenant_id): c for c in Conversation.query.filter_by(owner_id=current_user.id).all()}
+    views = {}
+    if my_listings:
+        from datetime import date, timedelta
+        from app.models import ListingView
+        rows = (db.session.query(ListingView.listing_id, db.func.sum(ListingView.views))
+                .filter(ListingView.listing_id.in_([l.id for l in my_listings]),
+                        ListingView.day >= date.today() - timedelta(days=29))
+                .group_by(ListingView.listing_id).all())
+        views = {lid: int(n) for lid, n in rows}
     return render_template("dashboard.html", my_listings=my_listings, received=received, sent=sent,
-                           stats=stats, tab=tab, convs=convs)
+                           stats=stats, tab=tab, convs=convs, views=views)
 
 
 @bp.route("/demande/<int:request_id>/<action>", methods=["POST"])

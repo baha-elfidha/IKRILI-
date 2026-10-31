@@ -42,12 +42,12 @@ def post_message(conv, sender, body, kind="texte", notify_title=None):
         pending = Notification.query.filter_by(user_id=recipient.id, is_read=False, url=url).filter(
             Notification.kind.in_(["message", "visite"])).first()
         if pending:
-            pending.created_at, pending.body = now, f"« {conv.listing.title} » : {body[:200]}"
+            pending.created_at, pending.body = now, f"« {conv.subject} » : {body[:200]}"
             pending.title = notify_title or f"Nouveaux messages de {sender.full_name}"
             pending.kind = notif_kind if notif_kind == "visite" else pending.kind
         else:
             notify(recipient.id, notif_kind, notify_title or f"{sender.full_name} t'a envoyé un message",
-                   f"« {conv.listing.title} » : {body[:200]}", url)
+                   f"« {conv.subject} » : {body[:200]}", url)
     return msg
 
 
@@ -104,9 +104,11 @@ def thread(conv_id):
                                      url=url_for("messages.thread", conv_id=conv.id)).update({"is_read": True})
         db.session.commit()
     msgs = conv.messages.all()
-    pending = (ContactRequest.query.filter_by(listing_id=conv.listing_id, sender_id=conv.tenant_id, kind="visite")
-               .filter(ContactRequest.status.in_(["nouveau", "lu"])).all())
-    booked = [s for s in conv.listing.slots if s.booked_by_id == conv.tenant_id and s.start_at > now_tn()]
+    pending, booked = [], []
+    if conv.listing:
+        pending = (ContactRequest.query.filter_by(listing_id=conv.listing_id, sender_id=conv.tenant_id, kind="visite")
+                   .filter(ContactRequest.status.in_(["nouveau", "lu"])).all())
+        booked = [s for s in conv.listing.slots if s.booked_by_id == conv.tenant_id and s.start_at > now_tn()]
     return render_template("messages/thread.html", conv=conv, msgs=msgs, member=member,
                            other=conv.other(current_user) if member else conv.owner,
                            last_id=msgs[-1].id if msgs else 0, pending=pending, booked=booked,

@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Mon profil de colocataire – IKRILI{% endblock %}
+{% block content %}
+{% set input = "w-full px-3.5 py-3 rounded-xl border-[1.5px] border-[#D9DDEA] bg-white text-[15px] font-normal focus:border-brand outline-none" %}
+{% set lbl = "flex flex-col gap-1.5 font-semibold text-sm" %}
+{% macro v(name, default='') -%}{{ form.get(name) if form.get(name) is not none else (p[name] if p and p[name] is not none else default) }}{%- endmacro %}
+{% macro pills(name, options, current) %}
+  <div class="flex flex-wrap gap-2">
+    {% for val, label in options %}
+      <label class="relative">
+        <input type="radio" name="{{ name }}" value="{{ val }}" {% if current|string == val|string %}checked{% endif %} class="peer sr-only">
+        <span class="min-h-[44px] px-4 flex items-center rounded-full border-[1.5px] border-line text-sm font-semibold cursor-pointer peer-checked:border-brand peer-checked:bg-brand-soft peer-checked:text-brand-dark peer-focus-visible:ring-2 peer-focus-visible:ring-brand">{{ label }}</span>
+      </label>
+    {% endfor %}
+  </div>
+{% endmacro %}
+
+<div class="max-w-3xl mx-auto px-4 sm:px-6 py-8 flex flex-col gap-7">
+  <div class="flex flex-col gap-1">
+    <a href="{{ url_for('roommates.index') }}" class="self-start text-sm font-semibold text-brand mb-2">&larr; Colocation</a>
+    <span class="text-sm font-extrabold uppercase tracking-wider text-brand">{{ 'Nouveau profil' if creating else 'Mon profil' }}</span>
+    <h1 class="text-3xl sm:text-4xl font-extrabold">Ton profil de colocataire</h1>
+    <p class="text-muted">Plus tu es précis, plus le score de compatibilité est fiable. Seul ton prénom est affiché.</p>
+  </div>
+
+  <form method="post" class="flex flex-col gap-7">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <fieldset class="flex flex-col gap-4">
+      <legend class="font-display text-xl font-extrabold mb-3">Ta recherche</legend>
+      {{ pills('situation', situations, v('situation', 'cherche')) }}
+      <div class="grid gap-4 sm:grid-cols-2">
+        <label class="{{ lbl }}">Budget maximum par mois
+          <span class="relative"><input type="number" name="budget_max" required min="50" max="5000" inputmode="numeric" value="{{ v('budget_max') }}" class="{{ input }} pr-14"><span class="absolute right-4 top-1/2 -translate-y-1/2 text-muted">TND</span></span>
+        </label>
+        <label class="{{ lbl }}">Emménagement souhaité
+          <input type="date" name="move_in" value="{{ form.get('move_in') or (p.move_in.isoformat() if p and p.move_in else '') }}" class="{{ input }}">
+        </label>
+        <label class="{{ lbl }}">Université
+          <select name="university_id" class="{{ input }}">
+            <option value="">Pas d'université / autre</option>
+            {% for u in universities %}<option value="{{ u.id }}" {% if v('university_id')|string == u.id|string %}selected{% endif %}>{{ u.name }} – {{ u.zone }}</option>{% endfor %}
+          </select>
+        </label>
+        <label class="{{ lbl }}">Études ou métier (facultatif)
+          <input name="studies" maxlength="120" value="{{ v('studies') }}" placeholder="Ex. 2e année génie logiciel" class="{{ input }}">
+        </label>
+        <label class="{{ lbl }}">Gouvernorat
+          <select name="governorate" class="{{ input }}">
+            <option value="">Peu importe</option>
+            {% for g in governorates %}<option value="{{ g }}" {% if v('governorate') == g %}selected{% endif %}>{{ g }}</option>{% endfor %}
+          </select>
+        </label>
+        <label class="{{ lbl }}">Quartier souhaité (facultatif)
+          <input name="city" maxlength="80" value="{{ v('city') }}" placeholder="Ex. El Ghazela" class="{{ input }}">
+        </label>
+      </div>
+    </fieldset>
+
+    <fieldset class="flex flex-col gap-4">
+      <legend class="font-display text-xl font-extrabold mb-3">Colocation mixte ou non</legend>
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div class="flex flex-col gap-2"><span class="font-semibold text-sm">Je suis</span>
+          {{ pills('gender', [('fille', 'Une fille'), ('garcon', 'Un garçon'), ('', 'Je préfère ne pas dire')], v('gender', '')) }}</div>
+        <div class="flex flex-col gap-2"><span class="font-semibold text-sm">Je cherche une colocation</span>
+          {{ pills('wants', [('tous', 'Peu importe'), ('filles', 'Filles uniquement'), ('garcons', 'Garçons uniquement')], v('wants', 'tous')) }}</div>
+      </div>
+      <p class="text-sm text-muted">Ces préférences sont respectées dans les deux sens : tu ne verras que des personnes compatibles, et inversement.</p>
+    </fieldset>
+
+    <fieldset class="flex flex-col gap-5">
+      <legend class="font-display text-xl font-extrabold mb-3">Ton mode de vie</legend>
+      <div class="flex flex-col gap-2"><span class="font-semibold text-sm">Rythme</span>{{ pills('rhythm', rhythms, v('rhythm', 'mixte')) }}</div>
+      <div class="flex flex-col gap-2"><span class="font-semibold text-sm">Ambiance à la maison</span>{{ pills('ambiance', ambiances, v('ambiance', 'equilibre')) }}</div>
+      <div class="flex flex-col gap-2"><span class="font-semibold text-sm">Rangement et ménage</span>{{ pills('tidiness', tidiness, v('tidiness', 2)) }}</div>
+      <div class="grid gap-3 sm:grid-cols-2">
+        {% for name, label in [('smoker', 'Je fume'), ('ok_smoker', "J'accepte un·e colocataire fumeur·se")] %}
+          <label class="flex items-center justify-between gap-4 p-4 rounded-2xl border-[1.5px] border-line cursor-pointer has-[:checked]:border-brand has-[:checked]:bg-brand-soft">
+            <span class="font-semibold">{{ label }}</span>
+            <input type="checkbox" name="{{ name }}" value="1" {% if (form and form.get(name)) or (not form and p and p[name]) %}checked{% endif %} class="w-5 h-5 accent-[#2D4BF0]">
+          </label>
+        {% endfor %}
+      </div>
+      <label class="{{ lbl }}">Quelques mots sur toi (facultatif)
+        <textarea name="bio" rows="4" maxlength="600" class="{{ input }}" placeholder="Ce que tu aimes, ce qui compte pour toi en colocation… Ne mets pas ton numéro ici.">{{ v('bio') }}</textarea>
+      </label>
+    </fieldset>
+
+    <div class="flex flex-wrap gap-3 items-center">
+      <button class="min-h-[52px] px-7 rounded-full bg-brand hover:bg-brand-dark text-white font-bold">{{ 'Voir mes colocataires compatibles' if creating else 'Enregistrer' }}</button>
+      {% if not creating %}<a href="{{ url_for('roommates.index') }}" class="font-semibold text-muted">Annuler</a>{% endif %}
+    </div>
+  </form>
+</div>
+{% endblock %}

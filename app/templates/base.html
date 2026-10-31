@@ -57,7 +57,8 @@
     {% set navlink = "px-3 py-2.5 rounded-full text-slate-700 hover:text-ink hover:bg-slate-100" %}
     <nav aria-label="Navigation principale" class="hidden md:flex items-center gap-1 text-[15px] font-semibold">
       <a href="{{ url_for('main.search') }}" class="{{ navlink }}">Louer</a>
-      <a href="{{ url_for('main.search', coloc=1) }}" class="{{ navlink }}">Colocation</a>
+      <a href="{{ url_for('roommates.index') }}" class="{{ navlink }}">Colocation</a>
+      <a href="{{ url_for('insights.market') }}" class="{{ navlink }} hidden lg:inline-flex">Prix du marché</a>
       {% if current_user.is_authenticated %}
         <a href="{{ url_for('messages.inbox') }}" class="{{ navlink }} flex items-center gap-1.5">Messages{% if unread_msgs %}<span class="min-w-[20px] h-5 px-1 rounded-full bg-pop text-ink text-[11px] font-extrabold flex items-center justify-center" aria-label="{{ unread_msgs }} non lu{{ 's' if unread_msgs > 1 }}">{{ unread_msgs }}</span>{% endif %}</a>
         <a href="{{ url_for('listings.dashboard') }}" class="{{ navlink }}">Mon espace</a>
@@ -87,7 +88,9 @@
     <div class="px-4 py-3 flex flex-col text-base font-semibold">
       {% set mlink = "px-3 py-3.5 rounded-lg hover:bg-slate-50" %}
       <a href="{{ url_for('main.search') }}" class="{{ mlink }}">Louer un logement</a>
-      <a href="{{ url_for('main.search', coloc=1) }}" class="{{ mlink }}">Colocation</a>
+      <a href="{{ url_for('main.search', coloc=1) }}" class="{{ mlink }}">Chambres en colocation</a>
+      <a href="{{ url_for('roommates.index') }}" class="{{ mlink }}">Trouver un colocataire</a>
+      <a href="{{ url_for('insights.market') }}" class="{{ mlink }}">Prix du marché</a>
       {% if current_user.is_authenticated %}
         <a href="{{ url_for('notifications.index') }}" class="{{ mlink }} flex items-center justify-between">Notifications{% if unread_notifs %}<span class="min-w-[24px] h-6 px-1.5 rounded-full bg-pop text-ink text-xs font-extrabold flex items-center justify-center">{{ unread_notifs }}</span>{% endif %}</a>
         <a href="{{ url_for('messages.inbox') }}" class="{{ mlink }} flex items-center justify-between">Messages{% if unread_msgs %}<span class="min-w-[24px] h-6 px-1.5 rounded-full bg-pop text-ink text-xs font-extrabold flex items-center justify-center">{{ unread_msgs }}</span>{% endif %}</a>
@@ -144,6 +147,8 @@
       <a href="{{ url_for('main.search', pour='etudiants') }}" class="hover:text-white">Logement étudiant</a>
       <a href="{{ url_for('main.search', pour='familles') }}" class="hover:text-white">Logement familial</a>
       <a href="{{ url_for('main.search', coloc=1) }}" class="hover:text-white">Colocation</a>
+      <a href="{{ url_for('roommates.index') }}" class="hover:text-white">Trouver un colocataire</a>
+      <a href="{{ url_for('insights.market') }}" class="hover:text-white">Prix des loyers</a>
       <a href="{{ url_for('listings.create') }}" class="hover:text-white">Publier une annonce</a>
     </nav>
     <nav aria-label="Informations" class="flex flex-col gap-2.5">

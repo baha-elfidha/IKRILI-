@@ -262,7 +262,8 @@ class Conversation(db.Model):
     """Fil de discussion entre un locataire et le propriétaire, à propos d'une annonce."""
     __table_args__ = (db.UniqueConstraint("listing_id", "tenant_id", name="uq_conversation_listing_tenant"),)
     id = db.Column(db.Integer, primary_key=True)
-    listing_id = db.Column(db.Integer, db.ForeignKey("listing.id", ondelete="CASCADE"), nullable=False, index=True)
+    # listing_id vide = conversation entre futurs colocataires (tenant = celui qui écrit, owner = l'autre)
+    listing_id = db.Column(db.Integer, db.ForeignKey("listing.id", ondelete="CASCADE"), nullable=True, index=True)
     tenant_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
     owner_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -278,6 +279,10 @@ class Conversation(db.Model):
 
     def other(self, user):
         return self.owner if user.id == self.tenant_id else self.tenant
+
+    @property
+    def subject(self):
+        return self.listing.title if self.listing else "Recherche de colocation"
 
     def is_member(self, user):
         return user.is_authenticated and user.id in (self.tenant_id, self.owner_id)
@@ -387,3 +392,46 @@ class Review(db.Model):
                                                             order_by="Review.created_at.desc()"))
     author = db.relationship("User", foreign_keys=[author_id])
     owner = db.relationship("User", foreign_keys=[owner_id])
+
+
+# ---------------------------------------------------------------------------
+# Statistiques
+# ---------------------------------------------------------------------------
+class ListingView(db.Model):
+    """Nombre de vues d'une annonce par jour (une vue par visiteur et par jour)."""
+    __table_args__ = (db.UniqueConstraint("listing_id", "day", name="uq_listing_view_day"),)
+    id = db.Column(db.Integer, primary_key=True)
+    listing_id = db.Column(db.Integer, db.ForeignKey("listing.id", ondelete="CASCADE"), nullable=False, index=True)
+    day = db.Column(db.Date, nullable=False, index=True)
+    views = db.Column(db.Integer, default=0, nullable=False)
+
+    listing = db.relationship("Listing", backref=db.backref("view_rows", cascade="all, delete-orphan", lazy=True))
+
+
+# ---------------------------------------------------------------------------
+# Colocation : profils et mise en relation
+# ---------------------------------------------------------------------------
+class RoommateProfile(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), unique=True, nullable=False)
+    is_active = db.Column(db.Boolean, default=True)
+    situation = db.Column(db.String(20), default="cherche")   # cherche (un logement à plusieurs) | a_logement (a une chambre libre)
+    budget_max = db.Column(db.Integer, nullable=False)
+    university_id = db.Column(db.Integer, db.ForeignKey("university.id"))
+    governorate = db.Column(db.String(60))
+    city = db.Column(db.String(80))
+    move_in = db.Column(db.Date)
+    gender = db.Column(db.String(10))          # fille | garcon | None (non précisé)
+    wants = db.Column(db.String(10), default="tous")  # filles | garcons | tous
+    smoker = db.Column(db.Boolean, default=False)
+    ok_smoker = db.Column(db.Boolean, default=False)
+    rhythm = db.Column(db.String(10), default="mixte")       # tot | tard | mixte
+    tidiness = db.Column(db.Integer, default=2)              # 1 détendu · 2 normal · 3 très ordonné
+    ambiance = db.Column(db.String(10), default="equilibre")  # calme | equilibre | sociable
+    studies = db.Column(db.String(120))
+    bio = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship("User", backref=db.backref("roommate_profile", uselist=False, cascade="all, delete-orphan"))
+    university = db.relationship("University")

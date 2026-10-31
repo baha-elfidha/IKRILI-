@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Statistiques – {{ listing.title }} – IKRILI{% endblock %}
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 sm:px-6 py-8 flex flex-col gap-7">
+  <div class="flex flex-col gap-1">
+    <a href="{{ url_for('listings.dashboard') }}" class="self-start text-sm font-semibold text-brand mb-2">&larr; Mon espace</a>
+    <span class="text-sm font-extrabold uppercase tracking-wider text-brand">Statistiques de l'annonce</span>
+    <h1 class="text-2xl sm:text-4xl font-extrabold">{{ listing.title }}</h1>
+    <p class="text-muted">{{ listing.city }}, {{ listing.governorate }} · {{ listing.price_tnd|tnd }} TND / mois ·
+      <a class="font-semibold text-brand" href="{{ url_for('main.listing_detail', listing_id=listing.id) }}">voir l'annonce</a></p>
+  </div>
+
+  <div class="grid grid-cols-2 lg:grid-cols-5 gap-3">
+    {% for n, label, sub in [(views30, 'Vues', '30 derniers jours'), (views_all, 'Vues', 'depuis la publication'),
+                             (favs, 'Favoris', 'personnes intéressées'), (convs, 'Conversations', 'locataires qui ont écrit'),
+                             (visits + booked, 'Visites', 'demandées ou réservées')] %}
+      <div class="p-4 rounded-3xl {{ 'bg-ink text-white' if loop.first else 'bg-slate-50' }} flex flex-col">
+        <span class="font-display text-3xl font-extrabold">{{ n }}</span>
+        <span class="font-bold">{{ label }}</span>
+        <span class="text-sm {{ 'text-white/70' if loop.first else 'text-muted' }}">{{ sub }}</span>
+      </div>
+    {% endfor %}
+  </div>
+
+  <section class="p-5 sm:p-6 rounded-3xl border border-line flex flex-col gap-4" aria-labelledby="t-views">
+    <div class="flex flex-wrap items-baseline justify-between gap-2">
+      <h2 id="t-views" class="text-xl font-extrabold">Vues par jour</h2>
+      {% if views30 %}<span class="text-sm text-muted">Taux de contact : <strong class="text-ink">{{ ((convs / views_all) * 100)|round(1) if views_all else 0 }} %</strong> des visiteurs ont écrit</span>{% endif %}
+    </div>
+    {% if views30 %}
+      <div class="flex items-end gap-[3px] h-44" role="img" aria-label="{{ views30 }} vues sur 30 jours">
+        {% for d, n in series %}
+          <div class="flex-1 h-full flex flex-col justify-end group relative">
+            <div class="rounded-t-md {{ 'bg-brand' if loop.last else 'bg-brand/70 group-hover:bg-brand' }}" style="height: {{ (n / max_day * 100) if n else 0 }}%; min-height: {{ '3px' if n else '1px' }}"></div>
+            <span class="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap px-2 py-1 rounded-md bg-ink text-white text-xs font-semibold opacity-0 group-hover:opacity-100">{{ d.strftime('%d/%m') }} · {{ n }}</span>
+          </div>
+        {% endfor %}
+      </div>
+      <div class="flex justify-between text-xs text-muted"><span>{{ series[0][0].strftime('%d/%m') }}</span><span>{{ series[15][0].strftime('%d/%m') }}</span><span>Aujourd'hui</span></div>
+    {% else %}
+      <p class="text-muted">Pas encore de vue ces 30 derniers jours. Partage le lien de ton annonce sur Facebook ou WhatsApp pour lancer les visites.</p>
+    {% endif %}
+  </section>
+
+  <div class="grid gap-5 lg:grid-cols-2">
+    <section class="p-5 sm:p-6 rounded-3xl border border-line flex flex-col gap-4" aria-labelledby="t-price">
+      <h2 id="t-price" class="text-xl font-extrabold">Ton prix face au marché</h2>
+      {% if est %}
+        <div class="flex flex-wrap items-center gap-3">
+          {% if verdict %}<span class="px-3 py-1.5 rounded-full text-sm font-bold {{ verdict.css }}">{{ verdict.label }}</span>{% endif %}
+          <span class="text-muted text-sm">d'après {{ est.n }} logements comparables</span>
+        </div>
+        <div class="flex flex-col gap-2">
+          {% set lo = [est.low, listing.price_tnd]|min * 0.85 %}{% set hi = [est.high, listing.price_tnd]|max * 1.1 %}          <div class="relative h-3 rounded-full bg-slate-100">
+            <div class="absolute h-3 rounded-full bg-brand-soft border border-brand/30" style="left: {{ (est.low - lo) / (hi - lo) * 100 }}%; width: {{ (est.high - est.low) / (hi - lo) * 100 }}%"></div>
+            <div class="absolute -top-1.5 w-1 h-6 rounded bg-ink" style="left: calc({{ (listing.price_tnd - lo) / (hi - lo) * 100 }}% - 2px)" title="Ton loyer"></div>
+          </div>
+          <div class="flex justify-between text-sm"><span class="text-muted">Fourchette estimée</span><strong>{{ est.low|tnd }} – {{ est.high|tnd }} TND</strong></div>
+          <div class="flex justify-between text-sm"><span class="text-muted">Loyer juste estimé</span><strong>{{ est.estimate|tnd }} TND</strong></div>
+          <div class="flex justify-between text-sm"><span class="text-muted">Ton loyer</span><strong>{{ listing.price_tnd|tnd }} TND</strong></div>
+        </div>
+      {% else %}
+        <p class="text-muted">Pas encore assez de logements comparables dans ton secteur pour estimer un juste prix. L'estimation apparaîtra automatiquement avec les nouvelles annonces.</p>
+      {% endif %}
+    </section>
+
+    <section class="p-5 sm:p-6 rounded-3xl border border-line flex flex-col gap-3" aria-labelledby="t-cmp">
+      <h2 id="t-cmp" class="text-xl font-extrabold">Comparé aux annonces similaires</h2>
+      <p class="text-sm text-muted">{{ compare.n }} annonce{{ 's' if compare.n != 1 }} du même type ({{ 'colocation, ' if listing.is_colocation }}{{ listing.governorate }}).</p>
+      {% if compare.views_median is not none %}
+        <table class="w-full text-[15px]">
+          <thead><tr class="text-left text-sm text-muted"><th class="py-2 font-semibold"></th><th class="py-2 font-semibold">Ton annonce</th><th class="py-2 font-semibold">Médiane similaires</th></tr></thead>
+          <tbody class="divide-y divide-line">
+            {% for label, mine, theirs, better in [('Vues (30 j)', views30, compare.views_median, views30 >= compare.views_median),
+                                                     ('Loyer', listing.price_tnd|tnd ~ ' TND', compare.price_median|tnd ~ ' TND', listing.price_tnd <= compare.price_median),
+                                                     ('Photos', listing.photos|length, compare.photos_median|round|int, listing.photos|length >= compare.photos_median)] %}
+              <tr><td class="py-2.5 text-muted">{{ label }}</td>
+                  <td class="py-2.5 font-bold {{ 'text-ok' if better else 'text-warn' }}">{{ mine }}</td>
+                  <td class="py-2.5 font-semibold">{{ theirs }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p class="text-muted">Il faut au moins 3 annonces similaires pour comparer. Reviens quand le marché de ton secteur sera plus fourni.</p>
+      {% endif %}
+    </section>
+  </div>
+
+  {% if tips %}
+    <section class="p-5 sm:p-6 rounded-3xl bg-sun-soft flex flex-col gap-3" aria-labelledby="t-tips">
+      <h2 id="t-tips" class="text-xl font-extrabold">Pour louer plus vite</h2>
+      <ul class="flex flex-col gap-2">
+        {% for t in tips %}<li class="flex gap-3"><span class="shrink-0 mt-1 w-5 h-5 rounded-full bg-sun text-ink text-xs font-extrabold flex items-center justify-center">{{ loop.index }}</span><span>{{ t }}</span></li>{% endfor %}
+      </ul>
+      <a href="{{ url_for('listings.edit', listing_id=listing.id) }}" class="self-start mt-1 min-h-[44px] px-5 rounded-full bg-ink text-white font-bold flex items-center">Améliorer mon annonce</a>
+    </section>
+  {% endif %}
+</div>
+{% endblock %}
